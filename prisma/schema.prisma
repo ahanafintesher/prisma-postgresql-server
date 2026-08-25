@@ -5,42 +5,125 @@ generator client {
 
 datasource db {
   provider = "postgresql"
- 
 }
 
 model User {
   id   String @id @default(uuid())
   name String
 
-  email    String   @unique
-  password String
-  role     UserRole @default(User)
+  email     String   @unique
+  password  String
+  role      UserRole @default(USER)
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products Product[]
+  reviews  Review[]
   orders   Orders[]
 
+  @@index([email])
+  @@index([role])
   @@map("users")
 }
 
-enum UserRole {
-  User
-  Admin
-  Manager
-}
-
 model Product {
-  id          String @id @default(uuid())
+  id          String        @id @default(uuid())
   title       String
   description String
   price       Int
   stock       Int
+  status      ProductStatus @default(ACTIVE)
+  isDeleted   Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  sellerId String
+  seller   User   @relation(fields: [sellerId], references: [id])
+
+  reviews Review[]
+  orders  Orders[]
+
+  @@index([categoryId])
+  @@index([sellerId])
+  @@index([status])
   @@map("products")
 }
 
-model Orders {
-  id       String @id @default(uuid())
-  userId   String
-  user     User   @relation(fields: [userId], references: [id])
-  quantity Int
+model Category {
+  id   String @id @default(uuid())
+  name String @unique
+  slug String @unique
 
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updateAt  DateTime @updatedAt
+
+  products Product[]
+
+  @@index([slug])
+  @@map("categories")
+}
+
+model Orders {
+  id        String      @id @default(uuid())
+  quantity  Int
+  status    OrderStatus @default(PENDING)
+  isDeleted Boolean     @default(false)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@index([userId])
+  @@index([productId])
+  @@index([status])
   @@map("orders")
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  rating    Int
+  comment   String?
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@unique([userId, productId])
+  @@index([productId])
+  @@index([userId])
+  @@map("reviews")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  MANAGER
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  OUT_OF_STOCK
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
 }

@@ -10,9 +10,29 @@
 */
 
 export const UserRole = {
-  User: 'User',
-  Admin: 'Admin',
-  Manager: 'Manager'
+  USER: 'USER',
+  ADMIN: 'ADMIN',
+  MANAGER: 'MANAGER'
 } as const
 
 export type UserRole = (typeof UserRole)[keyof typeof UserRole]
+
+
+export const ProductStatus = {
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE',
+  OUT_OF_STOCK: 'OUT_OF_STOCK'
+} as const
+
+export type ProductStatus = (typeof ProductStatus)[keyof typeof ProductStatus]
+
+
+export const OrderStatus = {
+  PENDING: 'PENDING',
+  CONFIRMED: 'CONFIRMED',
+  SHIPPED: 'SHIPPED',
+  DELIVERED: 'DELIVERED',
+  CANCELLED: 'CANCELLED'
+} as const
+
+export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus]
