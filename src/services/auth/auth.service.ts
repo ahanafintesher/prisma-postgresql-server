@@ -45,11 +45,13 @@ const user = await prisma.user.create({
 };
 
 export const loginUser = async (data: LoginInput) => {
+  const { email, password } = data;
+
   const user = await prisma.user.findUnique({
-    where:{
+    where: {
       email: email,
     },
-  }),
+  });
 
   if(!user){
     throw new Error("Invalid email or password");
@@ -60,7 +62,7 @@ export const loginUser = async (data: LoginInput) => {
     email: user.email,
     role: user.role,
   });
-}
+
 
 return {
     user: {
