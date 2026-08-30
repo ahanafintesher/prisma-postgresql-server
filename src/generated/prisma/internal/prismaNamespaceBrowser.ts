@@ -54,7 +54,7 @@ export const ModelName = {
   User: 'User',
   Product: 'Product',
   Category: 'Category',
-  Orders: 'Orders',
+  Order: 'Order',
   Review: 'Review'
 } as const
 
@@ -111,13 +111,13 @@ export const CategoryScalarFieldEnum = {
   slug: 'slug',
   isDeleted: 'isDeleted',
   createdAt: 'createdAt',
-  updateAt: 'updateAt'
+  updatedAt: 'updatedAt'
 } as const
 
 export type CategoryScalarFieldEnum = (typeof CategoryScalarFieldEnum)[keyof typeof CategoryScalarFieldEnum]
 
 
-export const OrdersScalarFieldEnum = {
+export const OrderScalarFieldEnum = {
   id: 'id',
   quantity: 'quantity',
   status: 'status',
@@ -128,7 +128,7 @@ export const OrdersScalarFieldEnum = {
   productId: 'productId'
 } as const
 
-export type OrdersScalarFieldEnum = (typeof OrdersScalarFieldEnum)[keyof typeof OrdersScalarFieldEnum]
+export type OrderScalarFieldEnum = (typeof OrderScalarFieldEnum)[keyof typeof OrderScalarFieldEnum]
 
 
 export const ReviewScalarFieldEnum = {

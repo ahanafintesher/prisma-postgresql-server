@@ -11,6 +11,6 @@
 export type * from './models/User'
 export type * from './models/Product'
 export type * from './models/Category'
-export type * from './models/Orders'
+export type * from './models/Order'
 export type * from './models/Review'
 export type * from './commonInputTypes'

@@ -20,7 +20,7 @@ model User {
 
   products Product[]
   reviews  Review[]
-  orders   Orders[]
+  orders   Order[]
 
   @@index([email])
   @@index([role])
@@ -45,7 +45,7 @@ model Product {
   seller   User   @relation(fields: [sellerId], references: [id])
 
   reviews Review[]
-  orders  Orders[]
+  orders  Order[]
 
   @@index([categoryId])
   @@index([sellerId])
@@ -60,7 +60,7 @@ model Category {
 
   isDeleted Boolean  @default(false)
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
   products Product[]
 
@@ -68,7 +68,7 @@ model Category {
   @@map("categories")
 }
 
-model Orders {
+model Order {
   id        String      @id @default(uuid())
   quantity  Int
   status    OrderStatus @default(PENDING)
