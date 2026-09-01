@@ -49,11 +49,20 @@ export const loginUser = async (data: LoginInput) => {
 
   const user = await prisma.user.findUnique({
     where: {
-      email: email,
+      email,
     },
   });
 
-  if(!user){
+  if (!user) {
+    throw new Error("Invalid email or password");
+  }
+
+  const isPasswordMatched = await bcrypt.compare(
+    password,
+    user.password,
+  );
+
+  if (!isPasswordMatched) {
     throw new Error("Invalid email or password");
   }
 
@@ -63,8 +72,7 @@ export const loginUser = async (data: LoginInput) => {
     role: user.role,
   });
 
-
-return {
+  return {
     user: {
       id: user.id,
       name: user.name,
