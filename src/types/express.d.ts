@@ -5,6 +5,8 @@ declare global {
         id: string;
         email: string;
         role: string;
+        roleSlug?: string;
+        permissions?: string[];
       };
     }
   }

@@ -18,27 +18,82 @@ export { Prisma }
 export * as $Enums from './enums'
 export * from './enums';
 /**
- * Model User
+ * Model PlatformAdmin
  * 
  */
-export type User = Prisma.UserModel
+export type PlatformAdmin = Prisma.PlatformAdminModel
 /**
- * Model Product
+ * Model PlatformRole
  * 
  */
-export type Product = Prisma.ProductModel
+export type PlatformRole = Prisma.PlatformRoleModel
 /**
- * Model Category
+ * Model PlatformPermission
  * 
  */
-export type Category = Prisma.CategoryModel
+export type PlatformPermission = Prisma.PlatformPermissionModel
 /**
- * Model Order
+ * Model PlatformRolePermission
  * 
  */
-export type Order = Prisma.OrderModel
+export type PlatformRolePermission = Prisma.PlatformRolePermissionModel
 /**
- * Model Review
+ * Model PlatformAdminSession
  * 
  */
-export type Review = Prisma.ReviewModel
+export type PlatformAdminSession = Prisma.PlatformAdminSessionModel
+/**
+ * Model Company
+ * 
+ */
+export type Company = Prisma.CompanyModel
+/**
+ * Model Plan
+ * 
+ */
+export type Plan = Prisma.PlanModel
+/**
+ * Model PlanVersion
+ * 
+ */
+export type PlanVersion = Prisma.PlanVersionModel
+/**
+ * Model Subscription
+ * 
+ */
+export type Subscription = Prisma.SubscriptionModel
+/**
+ * Model Payment
+ * 
+ */
+export type Payment = Prisma.PaymentModel
+/**
+ * Model Promotion
+ * 
+ */
+export type Promotion = Prisma.PromotionModel
+/**
+ * Model SupportTicket
+ * 
+ */
+export type SupportTicket = Prisma.SupportTicketModel
+/**
+ * Model TicketMessage
+ * 
+ */
+export type TicketMessage = Prisma.TicketMessageModel
+/**
+ * Model Announcement
+ * 
+ */
+export type Announcement = Prisma.AnnouncementModel
+/**
+ * Model AuditLog
+ * 
+ */
+export type AuditLog = Prisma.AuditLogModel
+/**
+ * Model SystemSetting
+ * 
+ */
+export type SystemSetting = Prisma.SystemSettingModel

@@ -7,123 +7,387 @@ datasource db {
   provider = "postgresql"
 }
 
-model User {
-  id   String @id @default(uuid())
-  name String
+// ----------------------------------------------------
+// Platform Admin & RBAC Domain
+// ----------------------------------------------------
 
-  email     String   @unique
-  password  String
-  role      UserRole @default(USER)
-  isDeleted Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model PlatformAdmin {
+  id          String       @id @default(uuid())
+  email       String       @unique
+  password    String
+  name        String
+  avatarUrl   String?      @map("avatar_url")
+  roleId      String       @map("role_id")
+  role        PlatformRole @relation(fields: [roleId], references: [id])
+  status      AdminStatus  @default(ACTIVE)
+  mfaSecret   String?      @map("mfa_secret")
+  mfaEnabled  Boolean      @default(false) @map("mfa_enabled")
+  lastLoginAt DateTime?    @map("last_login_at")
+  lastLoginIp String?      @map("last_login_ip")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
 
-  products Product[]
-  reviews  Review[]
-  orders   Order[]
+  sessions        PlatformAdminSession[]
+  assignedTickets SupportTicket[]
+  auditLogs       AuditLog[]
 
   @@index([email])
-  @@index([role])
-  @@map("users")
+  @@index([roleId])
+  @@map("platform_admins")
 }
 
-model Product {
-  id          String        @id @default(uuid())
-  title       String
+model PlatformRole {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  description String?
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  admins      PlatformAdmin[]
+  permissions PlatformRolePermission[]
+
+  @@map("platform_roles")
+}
+
+model PlatformPermission {
+  key         String   @id
   description String
-  price       Int
-  stock       Int
-  status      ProductStatus @default(ACTIVE)
-  isDeleted   Boolean       @default(false)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  category    String
+  createdAt   DateTime @default(now()) @map("created_at")
 
-  categoryId String
-  category   Category @relation(fields: [categoryId], references: [id])
+  roles PlatformRolePermission[]
 
-  sellerId String
-  seller   User   @relation(fields: [sellerId], references: [id])
-
-  reviews Review[]
-  orders  Order[]
-
-  @@index([categoryId])
-  @@index([sellerId])
-  @@index([status])
-  @@map("products")
+  @@map("platform_permissions")
 }
 
-model Category {
-  id   String @id @default(uuid())
-  name String @unique
-  slug String @unique
+model PlatformRolePermission {
+  roleId        String             @map("role_id")
+  permissionKey String             @map("permission_key")
+  role          PlatformRole       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission    PlatformPermission @relation(fields: [permissionKey], references: [key], onDelete: Cascade)
 
-  isDeleted Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  @@id([roleId, permissionKey])
+  @@map("platform_role_permissions")
+}
 
-  products Product[]
+model PlatformAdminSession {
+  id               String        @id @default(uuid())
+  adminId          String        @map("admin_id")
+  admin            PlatformAdmin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  refreshTokenHash String        @map("refresh_token_hash")
+  userAgent        String?       @map("user_agent")
+  ipAddress        String?       @map("ip_address")
+  expiresAt        DateTime      @map("expires_at")
+  revokedAt        DateTime?     @map("revoked_at")
+  createdAt        DateTime      @default(now()) @map("created_at")
+
+  @@index([adminId])
+  @@map("platform_admin_sessions")
+}
+
+// ----------------------------------------------------
+// Tenant / Company Domain
+// ----------------------------------------------------
+
+model Company {
+  id                    String             @id @default(uuid())
+  name                  String
+  slug                  String             @unique
+  ownerEmail            String             @map("owner_email")
+  status                CompanyStatus      @default(ACTIVE)
+  verificationStatus    VerificationStatus @default(UNVERIFIED) @map("verification_status")
+  verificationDocuments Json?              @map("verification_documents")
+  verifiedAt            DateTime?          @map("verified_at")
+  suspensionReason      String?            @map("suspension_reason")
+  suspendedAt           DateTime?          @map("suspended_at")
+  createdAt             DateTime           @default(now()) @map("created_at")
+  updatedAt             DateTime           @updatedAt @map("updated_at")
+
+  subscriptions  Subscription[]
+  payments       Payment[]
+  supportTickets SupportTicket[]
 
   @@index([slug])
-  @@map("categories")
-}
-
-model Order {
-  id        String      @id @default(uuid())
-  quantity  Int
-  status    OrderStatus @default(PENDING)
-  isDeleted Boolean     @default(false)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
-  productId String
-  product   Product @relation(fields: [productId], references: [id])
-
-  @@index([userId])
-  @@index([productId])
   @@index([status])
-  @@map("orders")
+  @@index([verificationStatus])
+  @@map("companies")
 }
 
-model Review {
-  id        String   @id @default(uuid())
-  rating    Int
-  comment   String?
-  isDeleted Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// ----------------------------------------------------
+// SaaS Billing & Revenue Domain
+// ----------------------------------------------------
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
+model Plan {
+  id           String   @id @default(uuid())
+  name         String
+  slug         String   @unique
+  description  String?
+  monthlyPrice Int      @map("monthly_price")
+  annualPrice  Int      @map("annual_price")
+  currency     String   @default("USD")
+  maxEmployees Int      @map("max_employees")
+  maxProjects  Int      @map("max_projects")
+  features     Json
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
-  productId String
-  product   Product @relation(fields: [productId], references: [id])
+  versions PlanVersion[]
 
-  @@unique([userId, productId])
-  @@index([productId])
-  @@index([userId])
-  @@map("reviews")
+  @@map("plans")
 }
 
-enum UserRole {
-  USER
-  ADMIN
-  MANAGER
+model PlanVersion {
+  id           String   @id @default(uuid())
+  planId       String   @map("plan_id")
+  plan         Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  version      Int      @default(1)
+  monthlyPrice Int      @map("monthly_price")
+  annualPrice  Int      @map("annual_price")
+  currency     String   @default("USD")
+  maxEmployees Int      @map("max_employees")
+  maxProjects  Int      @map("max_projects")
+  features     Json
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  subscriptions Subscription[]
+
+  @@index([planId])
+  @@map("plan_versions")
 }
 
-enum ProductStatus {
+model Subscription {
+  id                 String             @id @default(uuid())
+  companyId          String             @map("company_id")
+  company            Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  planVersionId      String             @map("plan_version_id")
+  planVersion        PlanVersion        @relation(fields: [planVersionId], references: [id])
+  billingInterval    BillingInterval    @default(MONTHLY) @map("billing_interval")
+  status             SubscriptionStatus @default(TRIALING)
+  currentPeriodStart DateTime           @default(now()) @map("current_period_start")
+  currentPeriodEnd   DateTime           @map("current_period_end")
+  trialEndsAt        DateTime?          @map("trial_ends_at")
+  cancelledAt        DateTime?          @map("cancelled_at")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  payments Payment[]
+
+  @@index([companyId])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+model Payment {
+  id             String         @id @default(uuid())
+  companyId      String         @map("company_id")
+  company        Company        @relation(fields: [companyId], references: [id])
+  subscriptionId String?        @map("subscription_id")
+  subscription   Subscription?  @relation(fields: [subscriptionId], references: [id])
+  gateway        PaymentGateway
+  amount         Int
+  currency       String         @default("USD")
+  status         PaymentStatus  @default(PENDING)
+  transactionRef String?        @map("transaction_ref")
+  idempotencyKey String         @unique @map("idempotency_key")
+  refundReason   String?        @map("refund_reason")
+  refundedAmount Int            @default(0) @map("refunded_amount")
+  metadata       Json?
+  capturedAt     DateTime?      @map("captured_at")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  @@index([companyId])
+  @@index([status])
+  @@map("payments")
+}
+
+model Promotion {
+  id             String       @id @default(uuid())
+  code           String       @unique
+  description    String?
+  discountType   DiscountType @default(PERCENTAGE) @map("discount_type")
+  discountValue  Int          @map("discount_value")
+  validFrom      DateTime     @default(now()) @map("valid_from")
+  validUntil     DateTime?    @map("valid_until")
+  maxRedemptions Int?         @map("max_redemptions")
+  timesRedeemed  Int          @default(0) @map("times_redeemed")
+  isActive       Boolean      @default(true) @map("is_active")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@map("promotions")
+}
+
+// ----------------------------------------------------
+// Support & Communications Domain
+// ----------------------------------------------------
+
+model SupportTicket {
+  id              String         @id @default(uuid())
+  companyId       String         @map("company_id")
+  company         Company        @relation(fields: [companyId], references: [id])
+  subject         String
+  priority        TicketPriority @default(MEDIUM)
+  status          TicketStatus   @default(OPEN)
+  assignedAdminId String?        @map("assigned_admin_id")
+  assignedAdmin   PlatformAdmin? @relation(fields: [assignedAdminId], references: [id])
+  requesterEmail  String         @map("requester_email")
+  slaBreached     Boolean        @default(false) @map("sla_breached")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  messages TicketMessage[]
+
+  @@index([companyId])
+  @@index([status])
+  @@index([assignedAdminId])
+  @@map("support_tickets")
+}
+
+model TicketMessage {
+  id             String        @id @default(uuid())
+  ticketId       String        @map("ticket_id")
+  ticket         SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId       String        @map("author_id")
+  authorRole     String        @map("author_role")
+  isInternalNote Boolean       @default(false) @map("is_internal_note")
+  messageBody    String        @map("message_body")
+  attachments    Json?
+  createdAt      DateTime      @default(now()) @map("created_at")
+
+  @@index([ticketId])
+  @@map("ticket_messages")
+}
+
+model Announcement {
+  id             String           @id @default(uuid())
+  title          String
+  content        String
+  type           AnnouncementType @default(INFO)
+  targetAudience String           @default("ALL") @map("target_audience")
+  isPublished    Boolean          @default(false) @map("is_published")
+  publishedAt    DateTime?        @map("published_at")
+  expiresAt      DateTime?        @map("expires_at")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  @@map("announcements")
+}
+
+// ----------------------------------------------------
+// Auditing & Governance Domain
+// ----------------------------------------------------
+
+model AuditLog {
+  id           String         @id @default(uuid())
+  actorId      String?        @map("actor_id")
+  actor        PlatformAdmin? @relation(fields: [actorId], references: [id])
+  actorEmail   String         @map("actor_email")
+  actorRole    String         @map("actor_role")
+  action       String
+  resourceType String         @map("resource_type")
+  resourceId   String?        @map("resource_id")
+  outcome      String         @default("SUCCESS")
+  reason       String?
+  changes      Json?
+  ipAddress    String?        @map("ip_address")
+  userAgent    String?        @map("user_agent")
+  createdAt    DateTime       @default(now()) @map("created_at")
+
+  @@index([actorEmail])
+  @@index([resourceType, resourceId])
+  @@index([action])
+  @@map("audit_logs")
+}
+
+model SystemSetting {
+  key         String   @id
+  value       Json
+  isSecret    Boolean  @default(false) @map("is_secret")
+  description String?
+  updatedBy   String?  @map("updated_by")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}
+
+// ----------------------------------------------------
+// Enumerations
+// ----------------------------------------------------
+
+enum AdminStatus {
   ACTIVE
-  INACTIVE
-  OUT_OF_STOCK
+  SUSPENDED
+  PENDING
 }
 
-enum OrderStatus {
+enum CompanyStatus {
+  ACTIVE
   PENDING
-  CONFIRMED
-  SHIPPED
-  DELIVERED
+  SUSPENDED
+  ARCHIVED
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum BillingInterval {
+  MONTHLY
+  ANNUAL
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
   CANCELLED
+  EXPIRED
+}
+
+enum PaymentGateway {
+  STRIPE
+  SSLCOMMERZ
+  BKASH
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum AnnouncementType {
+  INFO
+  WARNING
+  MAINTENANCE
+  CRITICAL
 }

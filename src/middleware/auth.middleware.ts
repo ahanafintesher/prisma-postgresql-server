@@ -1,53 +1,87 @@
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import prisma from "../lib/prisma";
+import { sendError } from "../lib/response";
 
 interface JwtPayload {
   id: string;
   email: string;
   role: string;
+  roleSlug?: string;
 }
 
-export const authenticate = (
+export const authenticate = async (
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   try {
     const authHeader = req.headers.authorization;
 
-    if (!authHeader) {
-      return res.status(401).json({
-        success: false,
-        message: "Authorization header is required",
-        data: null,
-      });
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return sendError(res, "Authorization Bearer token is required", 401);
     }
 
-    const token = authHeader.startsWith("Bearer ")
-      ? authHeader.split(" ")[1]
-      : null;
-
+    const token = authHeader.split(" ")[1];
     if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: "Bearer token is required",
-        data: null,
-      });
+      return sendError(res, "Bearer token is required", 401);
     }
 
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET as string,
-    ) as JwtPayload;
+    const secret = process.env.JWT_SECRET || "default_fallback_secret_worksphere_2026";
+    const decoded = jwt.verify(token, secret) as JwtPayload;
 
-    req.user = decoded;
+    // Verify admin is active in database
+    const admin = await prisma.platformAdmin.findUnique({
+      where: { id: decoded.id },
+      include: {
+        role: {
+          include: {
+            permissions: true,
+          },
+        },
+      },
+    });
+
+    if (!admin || admin.status === "SUSPENDED") {
+      return sendError(res, "Account is inactive or suspended", 403);
+    }
+
+    req.user = {
+      id: admin.id,
+      email: admin.email,
+      role: admin.role.name,
+      roleSlug: admin.role.slug,
+      permissions: admin.role.permissions.map((p) => p.permissionKey),
+    };
 
     next();
   } catch (error) {
-    return res.status(401).json({
-      success: false,
-      message: "Invalid or expired token",
-      data: null,
-    });
+    return sendError(res, "Invalid or expired token", 401);
   }
+};
+
+export const requirePermission = (permissionKey: string) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return sendError(res, "Authentication required", 401);
+    }
+
+    // Root super admin bypasses individual permission checks
+    if (req.user.roleSlug === "super-admin-root") {
+      return next();
+    }
+
+    if (
+      !req.user.permissions ||
+      !req.user.permissions.includes(permissionKey)
+    ) {
+      return sendError(
+        res,
+        `Access denied: Missing '${permissionKey}' permission`,
+        403
+      );
+    }
+
+    next();
+  };
 };
