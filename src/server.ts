@@ -1,8 +1,14 @@
-import dotenv from "dotenv";
+import "dotenv/config";
 import app from "./app";
 
-// Load environment variables FIRST before anything else
-dotenv.config();
+// Process-level crash prevention guards
+process.on("unhandledRejection", (reason) => {
+  console.error("[Process] Unhandled Promise Rejection:", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("[Process] Uncaught Exception:", error);
+});
 
 const PORT = process.env.PORT || 5000;
 

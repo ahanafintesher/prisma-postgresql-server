@@ -1,13 +1,18 @@
 import { Request, Response } from "express";
 import prisma from "../../lib/prisma";
 import { sendSuccess, sendError } from "../../lib/response";
+import { invalidateCacheCategory } from "../../lib/redis";
+import { parsePaginationParams, sendPaginated } from "../../lib/pagination";
 
 export class PaymentController {
   static async getPayments(req: Request, res: Response) {
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
-      const skip = (page - 1) * limit;
+      const { page, limit, skip, take, sortBy, sortOrder } = parsePaginationParams(req, {
+        defaultLimit: 10,
+        maxLimit: 100,
+        defaultSortBy: "createdAt",
+        allowedSortFields: ["createdAt", "amount", "status", "gateway", "currency"],
+      });
 
       const search = (req.query.search as string)?.trim() || "";
       const status = req.query.status as any;
@@ -36,8 +41,8 @@ export class PaymentController {
         prisma.payment.findMany({
           where: whereClause,
           skip,
-          take: limit,
-          orderBy: { createdAt: "desc" },
+          take,
+          orderBy: { [sortBy || "createdAt"]: sortOrder },
           include: {
             company: {
               select: {
@@ -67,12 +72,7 @@ export class PaymentController {
         createdAt: p.createdAt,
       }));
 
-      return sendSuccess(res, formatted, {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      });
+      return sendPaginated(res, formatted, total, page, limit);
     } catch (error: any) {
       console.error("Get payments error:", error);
       return sendError(res, "Failed to retrieve payments", 500);
@@ -99,7 +99,15 @@ export class PaymentController {
         return sendError(res, "Payment not found", 404);
       }
 
-      return sendSuccess(res, payment);
+      const formatted = {
+        ...payment,
+        amount: Math.round(payment.amount / 100),
+        amountCents: payment.amount,
+        refundedAmount: Math.round(payment.refundedAmount / 100),
+        refundedAmountCents: payment.refundedAmount,
+      };
+
+      return sendSuccess(res, formatted);
     } catch (error: any) {
       return sendError(res, "Failed to retrieve payment details", 500);
     }
@@ -163,9 +171,216 @@ export class PaymentController {
         },
       });
 
+      // Invalidate payments and dashboard caches
+      await invalidateCacheCategory("payments");
+      await invalidateCacheCategory("dashboard");
+
       return sendSuccess(res, updated, undefined, "Refund processed successfully");
     } catch (error: any) {
       return sendError(res, "Failed to process refund", 500);
+    }
+  }
+
+  static async reconcilePayment(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const { status } = req.body || {};
+
+      const payment = await prisma.payment.findUnique({
+        where: { id },
+        include: { company: true },
+      });
+
+      if (!payment) {
+        return sendError(res, "Payment not found", 404);
+      }
+
+      // Reconcile status to SUCCEEDED or specified valid status
+      const targetStatus = status || (payment.status === "PENDING" ? "SUCCEEDED" : payment.status);
+      const isSucceeded = targetStatus === "SUCCEEDED";
+
+      const updated = await prisma.payment.update({
+        where: { id },
+        data: {
+          status: targetStatus,
+          capturedAt: isSucceeded ? (payment.capturedAt || new Date()) : payment.capturedAt,
+        },
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          actorId: req.user?.id || null,
+          actorEmail: req.user?.email || "system",
+          actorRole: req.user?.roleSlug || "system",
+          action: "PAYMENT_RECONCILED",
+          resourceType: "PAYMENT",
+          resourceId: payment.id,
+          reason: `Reconciled gateway state for payment ${payment.id} from ${payment.status} to ${targetStatus}`,
+          changes: {
+            previousStatus: payment.status,
+            reconciledStatus: targetStatus,
+          },
+        },
+      });
+
+      await invalidateCacheCategory("payments");
+      await invalidateCacheCategory("dashboard");
+
+      return sendSuccess(res, updated, undefined, "Payment reconciled successfully");
+    } catch (error: any) {
+      console.error("Reconcile payment error:", error);
+      return sendError(res, "Failed to reconcile payment", 500);
+    }
+  }
+
+  static async getPromotions(req: Request, res: Response) {
+    try {
+      const { page, limit, skip, take, sortBy, sortOrder } = parsePaginationParams(req, {
+        defaultLimit: 10,
+        maxLimit: 100,
+        defaultSortBy: "createdAt",
+        allowedSortFields: ["createdAt", "code", "discountValue", "discountType", "validUntil"],
+      });
+
+      const search = (req.query.search as string)?.trim() || "";
+      const isActive = req.query.isActive !== undefined ? req.query.isActive === "true" : undefined;
+
+      const whereClause: any = {};
+      if (isActive !== undefined) {
+        whereClause.isActive = isActive;
+      }
+      if (search) {
+        whereClause.OR = [
+          { code: { contains: search, mode: "insensitive" } },
+          { description: { contains: search, mode: "insensitive" } },
+        ];
+      }
+
+      const [total, promotions] = await Promise.all([
+        prisma.promotion.count({ where: whereClause }),
+        prisma.promotion.findMany({
+          where: whereClause,
+          skip,
+          take,
+          orderBy: { [sortBy || "createdAt"]: sortOrder },
+        }),
+      ]);
+
+      return sendPaginated(res, promotions, total, page, limit);
+    } catch (error: any) {
+      console.error("Get promotions error:", error);
+      return sendError(res, "Failed to retrieve promotions", 500);
+    }
+  }
+
+  static async createPromotion(req: Request, res: Response) {
+    try {
+      const {
+        code,
+        description,
+        discountType = "PERCENTAGE",
+        discountValue,
+        validUntil,
+        maxRedemptions,
+      } = req.body;
+
+      if (!code || discountValue === undefined) {
+        return sendError(res, "Promotion code and discountValue are required", 400);
+      }
+
+      const existing = await prisma.promotion.findUnique({
+        where: { code: code.toUpperCase().trim() },
+      });
+      if (existing) {
+        return sendError(res, `Promotion code '${code}' already exists`, 409);
+      }
+
+      const promotion = await prisma.promotion.create({
+        data: {
+          code: code.toUpperCase().trim(),
+          description: description || null,
+          discountType,
+          discountValue: parseInt(discountValue),
+          validUntil: validUntil ? new Date(validUntil) : null,
+          maxRedemptions: maxRedemptions ? parseInt(maxRedemptions) : null,
+          isActive: true,
+        },
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          actorId: req.user?.id || null,
+          actorEmail: req.user?.email || "system",
+          actorRole: req.user?.roleSlug || "system",
+          action: "PROMOTION_CREATED",
+          resourceType: "PROMOTION",
+          resourceId: promotion.id,
+          reason: `Created promotion coupon ${promotion.code}`,
+        },
+      });
+
+      await invalidateCacheCategory("promotions");
+
+      return sendSuccess(res, promotion, undefined, "Promotion created successfully", 201);
+    } catch (error: any) {
+      console.error("Create promotion error:", error);
+      return sendError(res, "Failed to create promotion", 500);
+    }
+  }
+
+  static async updatePromotion(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const {
+        description,
+        discountType,
+        discountValue,
+        validUntil,
+        maxRedemptions,
+        isActive,
+      } = req.body;
+
+      const existing = await prisma.promotion.findUnique({ where: { id } });
+      if (!existing) {
+        return sendError(res, "Promotion not found", 404);
+      }
+
+      const updated = await prisma.promotion.update({
+        where: { id },
+        data: {
+          ...(description !== undefined ? { description } : {}),
+          ...(discountType !== undefined ? { discountType } : {}),
+          ...(discountValue !== undefined ? { discountValue: parseInt(discountValue) } : {}),
+          ...(validUntil !== undefined ? { validUntil: validUntil ? new Date(validUntil) : null } : {}),
+          ...(maxRedemptions !== undefined ? { maxRedemptions: maxRedemptions ? parseInt(maxRedemptions) : null } : {}),
+          ...(isActive !== undefined ? { isActive: Boolean(isActive) } : {}),
+        },
+      });
+
+      await invalidateCacheCategory("promotions");
+
+      return sendSuccess(res, updated, undefined, "Promotion updated successfully");
+    } catch (error: any) {
+      return sendError(res, "Failed to update promotion", 500);
+    }
+  }
+
+  static async deletePromotion(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+
+      const existing = await prisma.promotion.findUnique({ where: { id } });
+      if (!existing) {
+        return sendError(res, "Promotion not found", 404);
+      }
+
+      await prisma.promotion.delete({ where: { id } });
+
+      await invalidateCacheCategory("promotions");
+
+      return sendSuccess(res, { id }, undefined, "Promotion deleted successfully");
+    } catch (error: any) {
+      return sendError(res, "Failed to delete promotion", 500);
     }
   }
 }

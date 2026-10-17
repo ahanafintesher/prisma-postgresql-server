@@ -4,7 +4,11 @@ export interface PaginationMeta {
   page: number;
   limit: number;
   total: number;
-  totalPages?: number;
+  totalPages: number;
+  hasNextPage?: boolean;
+  hasPrevPage?: boolean;
+  nextPage?: number | null;
+  prevPage?: number | null;
 }
 
 export function sendSuccess<T = any>(
@@ -17,7 +21,12 @@ export function sendSuccess<T = any>(
   return res.status(statusCode).json({
     success: true,
     data,
-    ...(pagination ? { pagination } : {}),
+    ...(pagination
+      ? {
+          pagination,
+          meta: pagination,
+        }
+      : {}),
     ...(message ? { message } : {}),
   });
 }

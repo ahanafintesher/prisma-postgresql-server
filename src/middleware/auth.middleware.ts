@@ -3,6 +3,20 @@ import jwt from "jsonwebtoken";
 import prisma from "../lib/prisma";
 import { sendError } from "../lib/response";
 
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: string;
+        email: string;
+        role: string;
+        roleSlug?: string;
+        permissions?: string[];
+      };
+    }
+  }
+}
+
 interface JwtPayload {
   id: string;
   email: string;

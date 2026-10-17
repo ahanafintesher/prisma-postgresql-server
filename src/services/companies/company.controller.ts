@@ -1,13 +1,18 @@
 import { Request, Response } from "express";
 import prisma from "../../lib/prisma";
 import { sendSuccess, sendError } from "../../lib/response";
+import { invalidateCacheCategory } from "../../lib/redis";
+import { parsePaginationParams, sendPaginated } from "../../lib/pagination";
 
 export class CompanyController {
   static async getCompanies(req: Request, res: Response) {
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
-      const skip = (page - 1) * limit;
+      const { page, limit, skip, take, sortBy, sortOrder } = parsePaginationParams(req, {
+        defaultLimit: 10,
+        maxLimit: 100,
+        defaultSortBy: "createdAt",
+        allowedSortFields: ["createdAt", "name", "slug", "ownerEmail", "status", "verificationStatus"],
+      });
 
       const search = (req.query.search as string)?.trim() || "";
       const status = req.query.status as any;
@@ -36,8 +41,8 @@ export class CompanyController {
         prisma.company.findMany({
           where: whereClause,
           skip,
-          take: limit,
-          orderBy: { createdAt: "desc" },
+          take,
+          orderBy: { [sortBy || "createdAt"]: sortOrder },
           include: {
             subscriptions: {
               where: { status: "ACTIVE" },
@@ -73,12 +78,7 @@ export class CompanyController {
         paymentCount: c._count.payments,
       }));
 
-      return sendSuccess(res, formattedCompanies, {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      });
+      return sendPaginated(res, formattedCompanies, total, page, limit);
     } catch (error: any) {
       console.error("Get companies error:", error);
       return sendError(res, "Failed to retrieve companies", 500);
@@ -181,6 +181,10 @@ export class CompanyController {
         },
       });
 
+      // Invalidate companies and dashboard caches
+      await invalidateCacheCategory("companies");
+      await invalidateCacheCategory("dashboard");
+
       return sendSuccess(res, company, undefined, "Company created successfully", 201);
     } catch (error: any) {
       console.error("Create company error:", error);
@@ -233,6 +237,10 @@ export class CompanyController {
         },
       });
 
+      // Invalidate companies and dashboard caches
+      await invalidateCacheCategory("companies");
+      await invalidateCacheCategory("dashboard");
+
       return sendSuccess(res, updated, undefined, `Company status updated to ${status}`);
     } catch (error: any) {
       return sendError(res, "Failed to update company status", 500);
@@ -270,9 +278,188 @@ export class CompanyController {
         },
       });
 
+      // Invalidate companies and dashboard caches
+      await invalidateCacheCategory("companies");
+      await invalidateCacheCategory("dashboard");
+
       return sendSuccess(res, updated, undefined, `Company verification status set to ${verificationStatus}`);
     } catch (error: any) {
       return sendError(res, "Failed to process verification", 500);
+    }
+  }
+
+  static async updateCompany(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const { name, slug, ownerEmail, verificationDocuments } = req.body;
+
+      const existing = await prisma.company.findUnique({ where: { id } });
+      if (!existing) {
+        return sendError(res, "Company not found", 404);
+      }
+
+      if (slug && slug !== existing.slug) {
+        const slugConflict = await prisma.company.findUnique({ where: { slug } });
+        if (slugConflict) {
+          return sendError(res, `Company slug '${slug}' is already taken`, 409);
+        }
+      }
+
+      const updated = await prisma.company.update({
+        where: { id },
+        data: {
+          ...(name ? { name } : {}),
+          ...(slug ? { slug } : {}),
+          ...(ownerEmail ? { ownerEmail } : {}),
+          ...(verificationDocuments !== undefined ? { verificationDocuments } : {}),
+        },
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          actorId: req.user?.id || null,
+          actorEmail: req.user?.email || "system",
+          actorRole: req.user?.roleSlug || "system",
+          action: "COMPANY_METADATA_UPDATED",
+          resourceType: "COMPANY",
+          resourceId: existing.id,
+          reason: `Updated metadata for company ${existing.name}`,
+          changes: {
+            previous: { name: existing.name, slug: existing.slug, ownerEmail: existing.ownerEmail },
+            updated: { name: updated.name, slug: updated.slug, ownerEmail: updated.ownerEmail },
+          },
+        },
+      });
+
+      await invalidateCacheCategory("companies");
+      await invalidateCacheCategory("dashboard");
+
+      return sendSuccess(res, updated, undefined, "Company updated successfully");
+    } catch (error: any) {
+      return sendError(res, "Failed to update company", 500);
+    }
+  }
+
+  static async reactivateCompany(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const { reason } = req.body;
+
+      const company = await prisma.company.findUnique({ where: { id } });
+      if (!company) {
+        return sendError(res, "Company not found", 404);
+      }
+
+      const updated = await prisma.company.update({
+        where: { id },
+        data: {
+          status: "ACTIVE",
+          suspensionReason: null,
+          suspendedAt: null,
+        },
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          actorId: req.user?.id || null,
+          actorEmail: req.user?.email || "system",
+          actorRole: req.user?.roleSlug || "system",
+          action: "COMPANY_REACTIVATED",
+          resourceType: "COMPANY",
+          resourceId: company.id,
+          reason: reason || `Reactivated tenant company ${company.name}`,
+          changes: {
+            previousStatus: company.status,
+            newStatus: "ACTIVE",
+          },
+        },
+      });
+
+      await invalidateCacheCategory("companies");
+      await invalidateCacheCategory("dashboard");
+
+      return sendSuccess(res, updated, undefined, "Company reactivated successfully");
+    } catch (error: any) {
+      return sendError(res, "Failed to reactivate company", 500);
+    }
+  }
+
+  static async rejectCompany(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const { reason, rejectionReason } = req.body;
+      const note = reason || rejectionReason || "Verification rejected by platform operator";
+
+      const company = await prisma.company.findUnique({ where: { id } });
+      if (!company) {
+        return sendError(res, "Company not found", 404);
+      }
+
+      const updated = await prisma.company.update({
+        where: { id },
+        data: {
+          verificationStatus: "REJECTED",
+          verifiedAt: null,
+        },
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          actorId: req.user?.id || null,
+          actorEmail: req.user?.email || "system",
+          actorRole: req.user?.roleSlug || "system",
+          action: "COMPANY_VERIFICATION_REJECTED",
+          resourceType: "COMPANY",
+          resourceId: company.id,
+          reason: note,
+        },
+      });
+
+      await invalidateCacheCategory("companies");
+      await invalidateCacheCategory("dashboard");
+
+      return sendSuccess(res, updated, undefined, "Company verification rejected");
+    } catch (error: any) {
+      return sendError(res, "Failed to reject company verification", 500);
+    }
+  }
+
+  static async deleteCompany(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const { reason } = req.body || {};
+
+      const company = await prisma.company.findUnique({ where: { id } });
+      if (!company) {
+        return sendError(res, "Company not found", 404);
+      }
+
+      // Soft-delete to ARCHIVED per requirements and preservation rules
+      const updated = await prisma.company.update({
+        where: { id },
+        data: {
+          status: "ARCHIVED",
+        },
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          actorId: req.user?.id || null,
+          actorEmail: req.user?.email || "system",
+          actorRole: req.user?.roleSlug || "system",
+          action: "COMPANY_ARCHIVED",
+          resourceType: "COMPANY",
+          resourceId: company.id,
+          reason: reason || `Archived company ${company.name}`,
+        },
+      });
+
+      await invalidateCacheCategory("companies");
+      await invalidateCacheCategory("dashboard");
+
+      return sendSuccess(res, updated, undefined, "Company archived successfully");
+    } catch (error: any) {
+      return sendError(res, "Failed to delete/archive company", 500);
     }
   }
 }

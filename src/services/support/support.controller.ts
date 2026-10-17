@@ -1,13 +1,18 @@
 import { Request, Response } from "express";
 import prisma from "../../lib/prisma";
 import { sendSuccess, sendError } from "../../lib/response";
+import { invalidateCacheCategory } from "../../lib/redis";
+import { parsePaginationParams, sendPaginated } from "../../lib/pagination";
 
 export class SupportController {
   static async getTickets(req: Request, res: Response) {
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
-      const skip = (page - 1) * limit;
+      const { page, limit, skip, take, sortBy, sortOrder } = parsePaginationParams(req, {
+        defaultLimit: 10,
+        maxLimit: 100,
+        defaultSortBy: "createdAt",
+        allowedSortFields: ["createdAt", "priority", "status", "subject", "slaBreached"],
+      });
 
       const status = req.query.status as any;
       const priority = req.query.priority as any;
@@ -36,8 +41,8 @@ export class SupportController {
         prisma.supportTicket.findMany({
           where: whereClause,
           skip,
-          take: limit,
-          orderBy: { createdAt: "desc" },
+          take,
+          orderBy: { [sortBy || "createdAt"]: sortOrder },
           include: {
             company: {
               select: {
@@ -75,12 +80,7 @@ export class SupportController {
         createdAt: t.createdAt,
       }));
 
-      return sendSuccess(res, formatted, {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      });
+      return sendPaginated(res, formatted, total, page, limit);
     } catch (error: any) {
       return sendError(res, "Failed to retrieve support tickets", 500);
     }
@@ -142,6 +142,10 @@ export class SupportController {
         data: { updatedAt: new Date() },
       });
 
+      // Invalidate tickets and dashboard caches
+      await invalidateCacheCategory("tickets");
+      await invalidateCacheCategory("dashboard");
+
       return sendSuccess(res, message, undefined, "Message posted successfully", 201);
     } catch (error: any) {
       return sendError(res, "Failed to post message", 500);
@@ -167,9 +171,199 @@ export class SupportController {
         },
       });
 
+      // Invalidate tickets and dashboard caches
+      await invalidateCacheCategory("tickets");
+      await invalidateCacheCategory("dashboard");
+
       return sendSuccess(res, updated, undefined, "Ticket updated successfully");
     } catch (error: any) {
       return sendError(res, "Failed to update ticket", 500);
+    }
+  }
+
+  static async assignTicket(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const { assignedAdminId } = req.body;
+
+      if (!assignedAdminId) {
+        return sendError(res, "assignedAdminId is required", 400);
+      }
+
+      const [ticket, admin] = await Promise.all([
+        prisma.supportTicket.findUnique({ where: { id } }),
+        prisma.platformAdmin.findUnique({ where: { id: assignedAdminId } }),
+      ]);
+
+      if (!ticket) {
+        return sendError(res, "Ticket not found", 404);
+      }
+      if (!admin) {
+        return sendError(res, "Admin user not found", 404);
+      }
+
+      const updated = await prisma.supportTicket.update({
+        where: { id },
+        data: { assignedAdminId },
+        include: { assignedAdmin: true },
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          actorId: req.user?.id || null,
+          actorEmail: req.user?.email || "system",
+          actorRole: req.user?.roleSlug || "system",
+          action: "TICKET_ASSIGNED",
+          resourceType: "TICKET",
+          resourceId: ticket.id,
+          reason: `Assigned ticket '${ticket.subject}' to admin ${admin.name}`,
+        },
+      });
+
+      await invalidateCacheCategory("tickets");
+      await invalidateCacheCategory("dashboard");
+
+      return sendSuccess(res, updated, undefined, `Ticket assigned to ${admin.name}`);
+    } catch (error: any) {
+      return sendError(res, "Failed to assign ticket", 500);
+    }
+  }
+
+  static async getAnnouncements(req: Request, res: Response) {
+    try {
+      const { page, limit, skip, take, sortBy, sortOrder } = parsePaginationParams(req, {
+        defaultLimit: 10,
+        maxLimit: 100,
+        defaultSortBy: "createdAt",
+        allowedSortFields: ["createdAt", "title", "publishedAt", "expiresAt", "type"],
+      });
+
+      const type = req.query.type as any;
+      const isPublished = req.query.isPublished !== undefined ? req.query.isPublished === "true" : undefined;
+      const search = (req.query.search as string)?.trim() || "";
+
+      const whereClause: any = {};
+      if (type && type !== "ALL") whereClause.type = type;
+      if (isPublished !== undefined) whereClause.isPublished = isPublished;
+      if (search) {
+        whereClause.OR = [
+          { title: { contains: search, mode: "insensitive" } },
+          { content: { contains: search, mode: "insensitive" } },
+        ];
+      }
+
+      const [total, announcements] = await Promise.all([
+        prisma.announcement.count({ where: whereClause }),
+        prisma.announcement.findMany({
+          where: whereClause,
+          skip,
+          take,
+          orderBy: { [sortBy || "createdAt"]: sortOrder },
+        }),
+      ]);
+
+      return sendPaginated(res, announcements, total, page, limit);
+    } catch (error: any) {
+      return sendError(res, "Failed to retrieve announcements", 500);
+    }
+  }
+
+  static async createAnnouncement(req: Request, res: Response) {
+    try {
+      const {
+        title,
+        content,
+        type = "INFO",
+        targetAudience = "ALL",
+        isPublished = false,
+        expiresAt,
+      } = req.body;
+
+      if (!title || !content) {
+        return sendError(res, "Title and content are required", 400);
+      }
+
+      const announcement = await prisma.announcement.create({
+        data: {
+          title,
+          content,
+          type,
+          targetAudience,
+          isPublished: Boolean(isPublished),
+          publishedAt: isPublished ? new Date() : null,
+          expiresAt: expiresAt ? new Date(expiresAt) : null,
+        },
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          actorId: req.user?.id || null,
+          actorEmail: req.user?.email || "system",
+          actorRole: req.user?.roleSlug || "system",
+          action: "ANNOUNCEMENT_CREATED",
+          resourceType: "ANNOUNCEMENT",
+          resourceId: announcement.id,
+          reason: `Broadcast announcement created: ${announcement.title}`,
+        },
+      });
+
+      await invalidateCacheCategory("announcements");
+
+      return sendSuccess(res, announcement, undefined, "Announcement created successfully", 201);
+    } catch (error: any) {
+      return sendError(res, "Failed to create announcement", 500);
+    }
+  }
+
+  static async updateAnnouncement(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const { title, content, type, targetAudience, isPublished, expiresAt } = req.body;
+
+      const existing = await prisma.announcement.findUnique({ where: { id } });
+      if (!existing) {
+        return sendError(res, "Announcement not found", 404);
+      }
+
+      const publishedStatusChanged = isPublished !== undefined && Boolean(isPublished) !== existing.isPublished;
+
+      const updated = await prisma.announcement.update({
+        where: { id },
+        data: {
+          ...(title !== undefined ? { title } : {}),
+          ...(content !== undefined ? { content } : {}),
+          ...(type !== undefined ? { type } : {}),
+          ...(targetAudience !== undefined ? { targetAudience } : {}),
+          ...(isPublished !== undefined ? { isPublished: Boolean(isPublished) } : {}),
+          ...(publishedStatusChanged && isPublished ? { publishedAt: new Date() } : {}),
+          ...(expiresAt !== undefined ? { expiresAt: expiresAt ? new Date(expiresAt) : null } : {}),
+        },
+      });
+
+      await invalidateCacheCategory("announcements");
+
+      return sendSuccess(res, updated, undefined, "Announcement updated successfully");
+    } catch (error: any) {
+      return sendError(res, "Failed to update announcement", 500);
+    }
+  }
+
+  static async deleteAnnouncement(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+
+      const existing = await prisma.announcement.findUnique({ where: { id } });
+      if (!existing) {
+        return sendError(res, "Announcement not found", 404);
+      }
+
+      await prisma.announcement.delete({ where: { id } });
+
+      await invalidateCacheCategory("announcements");
+
+      return sendSuccess(res, { id }, undefined, "Announcement deleted successfully");
+    } catch (error: any) {
+      return sendError(res, "Failed to delete announcement", 500);
     }
   }
 }
