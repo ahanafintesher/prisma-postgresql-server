@@ -15,6 +15,7 @@ router.patch("/:id", requirePermission("platform.companies.manage"), CompanyCont
 router.patch("/:id/status", requirePermission("platform.companies.suspend"), CompanyController.updateStatus);
 router.post("/:id/suspend", requirePermission("platform.companies.suspend"), CompanyController.updateStatus);
 router.post("/:id/reactivate", requirePermission("platform.companies.suspend"), CompanyController.reactivateCompany);
+router.post("/:id/extend-trial", requirePermission("platform.companies.manage"), CompanyController.extendTrial);
 router.post("/:id/verify", requirePermission("platform.companies.verify"), CompanyController.verifyCompany);
 router.post("/:id/reject", requirePermission("platform.companies.verify"), CompanyController.rejectCompany);
 router.delete("/:id", requirePermission("platform.companies.manage"), CompanyController.deleteCompany);

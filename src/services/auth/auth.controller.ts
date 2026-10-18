@@ -6,8 +6,11 @@ import {
   generateRefreshToken,
   verifyRefreshToken,
   verifyAccessToken,
+  hashToken,
+  RefreshTokenPayload,
 } from "../../lib/jwt";
 import { sendSuccess, sendError } from "../../lib/response";
+import { verifyMfaToken } from "../../lib/totp";
 
 export class AuthController {
   static async login(req: Request, res: Response) {
@@ -56,28 +59,35 @@ export class AuthController {
         }, undefined, "2FA verification required");
       }
 
+      // Record session in database
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      const session = await prisma.platformAdminSession.create({
+        data: {
+          adminId: admin.id,
+          refreshTokenHash: "pending",
+          userAgent: (req.headers["user-agent"] as string) || null,
+          ipAddress: (req.headers["x-forwarded-for"] as string) || req.socket.remoteAddress || null,
+          expiresAt,
+        },
+      });
+
       const tokenPayload = {
         id: admin.id,
         email: admin.email,
         role: admin.role.name,
         roleSlug: admin.role.slug,
+        sessionId: session.id,
       };
 
       const token = generateAccessToken(tokenPayload);
-      const refreshToken = generateRefreshToken({ id: admin.id });
+      const refreshToken = generateRefreshToken({ id: admin.id, sessionId: session.id });
 
-      // Record session in database
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7);
-
-      const refreshTokenHash = await bcrypt.hash(refreshToken.slice(-10), 8);
-      await prisma.platformAdminSession.create({
+      await prisma.platformAdminSession.update({
+        where: { id: session.id },
         data: {
-          adminId: admin.id,
-          refreshTokenHash,
-          userAgent: req.headers["user-agent"] || null,
-          ipAddress: (req.headers["x-forwarded-for"] as string) || req.socket.remoteAddress || null,
-          expiresAt,
+          refreshTokenHash: hashToken(refreshToken),
         },
       });
 
@@ -107,6 +117,7 @@ export class AuthController {
 
       return sendSuccess(res, {
         token,
+        accessToken: token,
         refreshToken,
         user: {
           id: admin.id,
@@ -114,6 +125,7 @@ export class AuthController {
           email: admin.email,
           role: admin.role.name,
           roleSlug: admin.role.slug,
+          mfaEnabled: admin.mfaEnabled,
           permissions: admin.role.permissions.map((p) => p.permissionKey),
         },
       }, undefined, "Login successful");
@@ -125,38 +137,91 @@ export class AuthController {
 
   static async refresh(req: Request, res: Response) {
     try {
-      const { refreshToken } = req.body;
+      const refreshToken = req.body?.refreshToken || (req.headers["x-refresh-token"] as string);
       if (!refreshToken) {
         return sendError(res, "Refresh token is required", 400);
       }
 
-      const decoded = verifyRefreshToken(refreshToken);
-      const admin = await prisma.platformAdmin.findUnique({
-        where: { id: decoded.id },
+      let decoded: RefreshTokenPayload;
+      try {
+        decoded = verifyRefreshToken(refreshToken);
+      } catch (err) {
+        return sendError(res, "Invalid or expired refresh token", 401);
+      }
+
+      if (!decoded.sessionId || !decoded.id) {
+        return sendError(res, "Malformed refresh token session reference", 401);
+      }
+
+      const session = await prisma.platformAdminSession.findUnique({
+        where: { id: decoded.sessionId },
         include: {
-          role: {
-            include: { permissions: true },
+          admin: {
+            include: {
+              role: {
+                include: { permissions: true },
+              },
+            },
           },
         },
       });
 
-      if (!admin || admin.status === "SUSPENDED") {
-        return sendError(res, "Invalid session or account suspended", 401);
+      if (!session || session.adminId !== decoded.id) {
+        return sendError(res, "Invalid session reference", 401);
       }
 
+      if (session.revokedAt || session.expiresAt < new Date()) {
+        return sendError(res, "Session has expired or been revoked", 401);
+      }
+
+      const expectedHash = hashToken(refreshToken);
+      if (session.refreshTokenHash !== expectedHash) {
+        // Potential token reuse / compromise detected: immediately revoke session
+        await prisma.platformAdminSession.update({
+          where: { id: session.id },
+          data: { revokedAt: new Date() },
+        });
+        return sendError(res, "Invalid refresh token. Session has been revoked for security.", 401);
+      }
+
+      const admin = session.admin;
+      if (!admin || admin.status === "SUSPENDED") {
+        return sendError(res, "Account is invalid or suspended", 403);
+      }
+
+      // Rotate refresh token and update session
+      const newRefreshToken = generateRefreshToken({ id: admin.id, sessionId: session.id });
       const newToken = generateAccessToken({
         id: admin.id,
         email: admin.email,
         role: admin.role.name,
         roleSlug: admin.role.slug,
+        sessionId: session.id,
       });
 
-      return sendSuccess(res, {
-        token: newToken,
-        refreshToken,
-      }, undefined, "Token refreshed successfully");
+      const newExpiresAt = new Date();
+      newExpiresAt.setDate(newExpiresAt.getDate() + 7);
+
+      await prisma.platformAdminSession.update({
+        where: { id: session.id },
+        data: {
+          refreshTokenHash: hashToken(newRefreshToken),
+          expiresAt: newExpiresAt,
+        },
+      });
+
+      return sendSuccess(
+        res,
+        {
+          token: newToken,
+          accessToken: newToken,
+          refreshToken: newRefreshToken,
+        },
+        undefined,
+        "Token refreshed successfully"
+      );
     } catch (error) {
-      return sendError(res, "Invalid or expired refresh token", 401);
+      return sendError(res, "Failed to refresh token", 500);
     }
   }
 
@@ -198,16 +263,24 @@ export class AuthController {
   static async logout(req: Request, res: Response) {
     try {
       if (req.user) {
-        // Revoke active sessions
-        await prisma.platformAdminSession.updateMany({
-          where: {
-            adminId: req.user.id,
-            revokedAt: null,
-          },
-          data: {
-            revokedAt: new Date(),
-          },
-        });
+        if (req.user.sessionId) {
+          // Revoke current session only
+          await prisma.platformAdminSession.update({
+            where: { id: req.user.sessionId },
+            data: { revokedAt: new Date() },
+          });
+        } else {
+          // Fallback: revoke all sessions if token has no sessionId
+          await prisma.platformAdminSession.updateMany({
+            where: {
+              adminId: req.user.id,
+              revokedAt: null,
+            },
+            data: {
+              revokedAt: new Date(),
+            },
+          });
+        }
       }
       return sendSuccess(res, { message: "Logged out successfully" });
     } catch (error: any) {
@@ -230,6 +303,10 @@ export class AuthController {
         return sendError(res, "Invalid or expired 2FA session token", 401);
       }
 
+      if (decoded.role !== "2FA_PENDING") {
+        return sendError(res, "Invalid token type for 2FA verification", 401);
+      }
+
       const admin = await prisma.platformAdmin.findUnique({
         where: { id: decoded.id },
         include: {
@@ -243,33 +320,53 @@ export class AuthController {
         return sendError(res, "Account is invalid or suspended", 403);
       }
 
+      if (!admin.mfaSecret) {
+        return sendError(res, "Two-factor authentication is not configured for this account", 400);
+      }
+
       // Valid TOTP format check (standard 6-digit numeric token)
       const sanitizedCode = String(code).trim();
       if (!/^\d{6}$/.test(sanitizedCode)) {
-        return sendError(res, "Invalid 2FA code format. Must be 6 digits.", 400);
+        return sendError(res, "Invalid 2FA code format. Must be 6 digits.", 400, {
+          code: ["Must be a 6-digit numeric code"],
+        });
       }
+
+      const isTotpValid = verifyMfaToken(sanitizedCode, admin.mfaSecret);
+      if (!isTotpValid) {
+        return sendError(res, "Invalid or expired 2FA verification code", 401, {
+          code: ["The provided 6-digit code is incorrect or expired"],
+        });
+      }
+
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      const session = await prisma.platformAdminSession.create({
+        data: {
+          adminId: admin.id,
+          refreshTokenHash: "pending",
+          userAgent: (req.headers["user-agent"] as string) || null,
+          ipAddress: (req.headers["x-forwarded-for"] as string) || req.socket.remoteAddress || null,
+          expiresAt,
+        },
+      });
 
       const tokenPayload = {
         id: admin.id,
         email: admin.email,
         role: admin.role.name,
         roleSlug: admin.role.slug,
+        sessionId: session.id,
       };
 
       const token = generateAccessToken(tokenPayload);
-      const refreshToken = generateRefreshToken({ id: admin.id });
+      const refreshToken = generateRefreshToken({ id: admin.id, sessionId: session.id });
 
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7);
-
-      const refreshTokenHash = await bcrypt.hash(refreshToken.slice(-10), 8);
-      await prisma.platformAdminSession.create({
+      await prisma.platformAdminSession.update({
+        where: { id: session.id },
         data: {
-          adminId: admin.id,
-          refreshTokenHash,
-          userAgent: req.headers["user-agent"] || null,
-          ipAddress: (req.headers["x-forwarded-for"] as string) || req.socket.remoteAddress || null,
-          expiresAt,
+          refreshTokenHash: hashToken(refreshToken),
         },
       });
 
@@ -296,6 +393,7 @@ export class AuthController {
           email: admin.email,
           role: admin.role.name,
           roleSlug: admin.role.slug,
+          mfaEnabled: admin.mfaEnabled,
           permissions: admin.role.permissions.map((p) => p.permissionKey),
         },
       }, undefined, "2FA authentication successful");
@@ -484,6 +582,7 @@ export class AuthController {
       await prisma.platformAdminSession.updateMany({
         where: {
           adminId: req.user.id,
+          id: req.user.sessionId ? { not: req.user.sessionId } : undefined,
           revokedAt: null,
         },
         data: {
@@ -496,13 +595,13 @@ export class AuthController {
           actorId: req.user.id,
           actorEmail: req.user.email,
           actorRole: req.user.roleSlug || "system",
-          action: "ALL_SESSIONS_REVOKED",
+          action: "ALL_OTHER_SESSIONS_REVOKED",
           resourceType: "AUTH_SESSION",
           outcome: "SUCCESS",
         },
       });
 
-      return sendSuccess(res, { message: "All sessions have been revoked." });
+      return sendSuccess(res, { message: "All other sessions have been revoked." });
     } catch (error: any) {
       return sendError(res, "Failed to revoke sessions", 500);
     }

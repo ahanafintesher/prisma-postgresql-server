@@ -115,6 +115,33 @@ export class SubscriptionController {
     }
   }
 
+  static async getSubscriptionById(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const subscription = await prisma.subscription.findUnique({
+        where: { id },
+        include: {
+          company: true,
+          planVersion: {
+            include: { plan: true },
+          },
+          payments: {
+            orderBy: { createdAt: "desc" },
+            take: 20,
+          },
+        },
+      });
+
+      if (!subscription) {
+        return sendError(res, "Subscription not found", 404);
+      }
+
+      return sendSuccess(res, subscription);
+    } catch (error: any) {
+      return sendError(res, "Failed to retrieve subscription detail", 500);
+    }
+  }
+
   static async changePlan(req: Request, res: Response) {
     try {
       const id = req.params.id as string;

@@ -16,6 +16,7 @@ router.delete("/announcements/:id", requirePermission("platform.announcements.ma
 // Tickets (Supports both /tickets/... and root /... when mounted directly at /tickets)
 router.get("/tickets", cacheResponse({ ttlSeconds: 15, prefix: "tickets" }), SupportController.getTickets);
 router.get("/tickets/:id", cacheResponse({ ttlSeconds: 30, prefix: "tickets" }), SupportController.getTicketById);
+router.post("/tickets", requirePermission("platform.tickets.manage"), SupportController.createTicket);
 router.post("/tickets/:id/replies", requirePermission("platform.tickets.reply"), SupportController.addMessage);
 router.post("/tickets/:id/notes", requirePermission("platform.tickets.notes"), SupportController.addMessage);
 router.patch("/tickets/:id/status", SupportController.updateStatus);
@@ -25,6 +26,7 @@ router.post("/tickets/:id/assign", requirePermission("platform.tickets.assign"),
 // Direct aliases for when mounted under /tickets
 router.get("/", cacheResponse({ ttlSeconds: 15, prefix: "tickets" }), SupportController.getTickets);
 router.get("/:id", cacheResponse({ ttlSeconds: 30, prefix: "tickets" }), SupportController.getTicketById);
+router.post("/", requirePermission("platform.tickets.manage"), SupportController.createTicket);
 router.post("/:id/replies", requirePermission("platform.tickets.reply"), SupportController.addMessage);
 router.post("/:id/notes", requirePermission("platform.tickets.notes"), SupportController.addMessage);
 router.patch("/:id/status", SupportController.updateStatus);

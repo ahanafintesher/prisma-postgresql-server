@@ -206,6 +206,12 @@ export class CompanyController {
         return sendError(res, "Company not found", 404);
       }
 
+      if (company.status === status) {
+        return sendError(res, `Tenant is already ${status.toLowerCase()}`, 409, {
+          status: [`Cannot transition from ${company.status} to ${status}`],
+        });
+      }
+
       // If suspending, require reason per AC-05 in requirements-final.md
       if (status === "SUSPENDED" && !reason) {
         return sendError(res, "Documented reason is mandatory when suspending a company", 400);
@@ -285,6 +291,102 @@ export class CompanyController {
       return sendSuccess(res, updated, undefined, `Company verification status set to ${verificationStatus}`);
     } catch (error: any) {
       return sendError(res, "Failed to process verification", 500);
+    }
+  }
+
+  static async extendTrial(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const { days, reason } = req.body;
+
+      if (!days || Number(days) <= 0 || !reason) {
+        return sendError(res, "days (positive number) and reason are required", 400, {
+          ...((!days || Number(days) <= 0) ? { days: ["Days must be a positive integer"] } : {}),
+          ...(!reason ? { reason: ["Documented reason is mandatory"] } : {}),
+        });
+      }
+
+      const company = await prisma.company.findUnique({
+        where: { id },
+        include: {
+          subscriptions: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+          },
+        },
+      });
+
+      if (!company) {
+        return sendError(res, "Company not found", 404);
+      }
+
+      let subscription = company.subscriptions[0];
+      let newTrialEndsAt: Date;
+
+      if (subscription) {
+        const baseDate = subscription.trialEndsAt && subscription.trialEndsAt > new Date()
+          ? new Date(subscription.trialEndsAt)
+          : new Date();
+        newTrialEndsAt = new Date(baseDate.getTime() + Number(days) * 86400 * 1000);
+
+        subscription = await prisma.subscription.update({
+          where: { id: subscription.id },
+          data: {
+            trialEndsAt: newTrialEndsAt,
+            currentPeriodEnd: newTrialEndsAt,
+            status: "TRIALING",
+          },
+        });
+      } else {
+        const defaultPlanVersion = await prisma.planVersion.findFirst({
+          where: { isActive: true },
+          orderBy: { version: "desc" },
+        });
+
+        if (!defaultPlanVersion) {
+          return sendError(res, "No active pricing plan available to create trial", 500);
+        }
+
+        newTrialEndsAt = new Date(Date.now() + Number(days) * 86400 * 1000);
+        subscription = await prisma.subscription.create({
+          data: {
+            companyId: company.id,
+            planVersionId: defaultPlanVersion.id,
+            status: "TRIALING",
+            trialEndsAt: newTrialEndsAt,
+            currentPeriodStart: new Date(),
+            currentPeriodEnd: newTrialEndsAt,
+          },
+        });
+      }
+
+      await prisma.auditLog.create({
+        data: {
+          actorId: req.user?.id || null,
+          actorEmail: req.user?.email || "system",
+          actorRole: req.user?.roleSlug || "admin",
+          action: "COMPANY_TRIAL_EXTENDED",
+          resourceType: "COMPANY",
+          resourceId: company.id,
+          reason: String(reason),
+          changes: {
+            extendedDays: Number(days),
+            trialEndsAt: newTrialEndsAt,
+          },
+        },
+      });
+
+      await invalidateCacheCategory("companies");
+      await invalidateCacheCategory("subscriptions");
+
+      return sendSuccess(res, {
+        companyId: company.id,
+        extendedDays: Number(days),
+        trialEndsAt: newTrialEndsAt,
+        reason,
+      }, undefined, `Trial period extended by ${days} days`);
+    } catch (error: any) {
+      return sendError(res, "Failed to extend trial period", 500);
     }
   }
 

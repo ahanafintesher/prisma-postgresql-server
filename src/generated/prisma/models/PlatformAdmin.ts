@@ -36,6 +36,7 @@ export type PlatformAdminMinAggregateOutputType = {
   mfaEnabled: boolean | null
   lastLoginAt: Date | null
   lastLoginIp: string | null
+  phone: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -52,6 +53,7 @@ export type PlatformAdminMaxAggregateOutputType = {
   mfaEnabled: boolean | null
   lastLoginAt: Date | null
   lastLoginIp: string | null
+  phone: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -68,6 +70,7 @@ export type PlatformAdminCountAggregateOutputType = {
   mfaEnabled: number
   lastLoginAt: number
   lastLoginIp: number
+  phone: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -86,6 +89,7 @@ export type PlatformAdminMinAggregateInputType = {
   mfaEnabled?: true
   lastLoginAt?: true
   lastLoginIp?: true
+  phone?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -102,6 +106,7 @@ export type PlatformAdminMaxAggregateInputType = {
   mfaEnabled?: true
   lastLoginAt?: true
   lastLoginIp?: true
+  phone?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -118,6 +123,7 @@ export type PlatformAdminCountAggregateInputType = {
   mfaEnabled?: true
   lastLoginAt?: true
   lastLoginIp?: true
+  phone?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -207,6 +213,7 @@ export type PlatformAdminGroupByOutputType = {
   mfaEnabled: boolean
   lastLoginAt: Date | null
   lastLoginIp: string | null
+  phone: string | null
   createdAt: Date
   updatedAt: Date
   _count: PlatformAdminCountAggregateOutputType | null
@@ -244,10 +251,12 @@ export type PlatformAdminWhereInput = {
   mfaEnabled?: Prisma.BoolFilter<"PlatformAdmin"> | boolean
   lastLoginAt?: Prisma.DateTimeNullableFilter<"PlatformAdmin"> | Date | string | null
   lastLoginIp?: Prisma.StringNullableFilter<"PlatformAdmin"> | string | null
+  phone?: Prisma.StringNullableFilter<"PlatformAdmin"> | string | null
   createdAt?: Prisma.DateTimeFilter<"PlatformAdmin"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"PlatformAdmin"> | Date | string
   role?: Prisma.XOR<Prisma.PlatformRoleScalarRelationFilter, Prisma.PlatformRoleWhereInput>
   sessions?: Prisma.PlatformAdminSessionListRelationFilter
+  apiKeys?: Prisma.PlatformApiKeyListRelationFilter
   assignedTickets?: Prisma.SupportTicketListRelationFilter
   auditLogs?: Prisma.AuditLogListRelationFilter
 }
@@ -264,10 +273,12 @@ export type PlatformAdminOrderByWithRelationInput = {
   mfaEnabled?: Prisma.SortOrder
   lastLoginAt?: Prisma.SortOrderInput | Prisma.SortOrder
   lastLoginIp?: Prisma.SortOrderInput | Prisma.SortOrder
+  phone?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   role?: Prisma.PlatformRoleOrderByWithRelationInput
   sessions?: Prisma.PlatformAdminSessionOrderByRelationAggregateInput
+  apiKeys?: Prisma.PlatformApiKeyOrderByRelationAggregateInput
   assignedTickets?: Prisma.SupportTicketOrderByRelationAggregateInput
   auditLogs?: Prisma.AuditLogOrderByRelationAggregateInput
 }
@@ -287,10 +298,12 @@ export type PlatformAdminWhereUniqueInput = Prisma.AtLeast<{
   mfaEnabled?: Prisma.BoolFilter<"PlatformAdmin"> | boolean
   lastLoginAt?: Prisma.DateTimeNullableFilter<"PlatformAdmin"> | Date | string | null
   lastLoginIp?: Prisma.StringNullableFilter<"PlatformAdmin"> | string | null
+  phone?: Prisma.StringNullableFilter<"PlatformAdmin"> | string | null
   createdAt?: Prisma.DateTimeFilter<"PlatformAdmin"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"PlatformAdmin"> | Date | string
   role?: Prisma.XOR<Prisma.PlatformRoleScalarRelationFilter, Prisma.PlatformRoleWhereInput>
   sessions?: Prisma.PlatformAdminSessionListRelationFilter
+  apiKeys?: Prisma.PlatformApiKeyListRelationFilter
   assignedTickets?: Prisma.SupportTicketListRelationFilter
   auditLogs?: Prisma.AuditLogListRelationFilter
 }, "id" | "email">
@@ -307,6 +320,7 @@ export type PlatformAdminOrderByWithAggregationInput = {
   mfaEnabled?: Prisma.SortOrder
   lastLoginAt?: Prisma.SortOrderInput | Prisma.SortOrder
   lastLoginIp?: Prisma.SortOrderInput | Prisma.SortOrder
+  phone?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.PlatformAdminCountOrderByAggregateInput
@@ -329,6 +343,7 @@ export type PlatformAdminScalarWhereWithAggregatesInput = {
   mfaEnabled?: Prisma.BoolWithAggregatesFilter<"PlatformAdmin"> | boolean
   lastLoginAt?: Prisma.DateTimeNullableWithAggregatesFilter<"PlatformAdmin"> | Date | string | null
   lastLoginIp?: Prisma.StringNullableWithAggregatesFilter<"PlatformAdmin"> | string | null
+  phone?: Prisma.StringNullableWithAggregatesFilter<"PlatformAdmin"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"PlatformAdmin"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"PlatformAdmin"> | Date | string
 }
@@ -344,10 +359,12 @@ export type PlatformAdminCreateInput = {
   mfaEnabled?: boolean
   lastLoginAt?: Date | string | null
   lastLoginIp?: string | null
+  phone?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   role: Prisma.PlatformRoleCreateNestedOneWithoutAdminsInput
   sessions?: Prisma.PlatformAdminSessionCreateNestedManyWithoutAdminInput
+  apiKeys?: Prisma.PlatformApiKeyCreateNestedManyWithoutAdminInput
   assignedTickets?: Prisma.SupportTicketCreateNestedManyWithoutAssignedAdminInput
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutActorInput
 }
@@ -364,9 +381,11 @@ export type PlatformAdminUncheckedCreateInput = {
   mfaEnabled?: boolean
   lastLoginAt?: Date | string | null
   lastLoginIp?: string | null
+  phone?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   sessions?: Prisma.PlatformAdminSessionUncheckedCreateNestedManyWithoutAdminInput
+  apiKeys?: Prisma.PlatformApiKeyUncheckedCreateNestedManyWithoutAdminInput
   assignedTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutAssignedAdminInput
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutActorInput
 }
@@ -382,10 +401,12 @@ export type PlatformAdminUpdateInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastLoginIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   role?: Prisma.PlatformRoleUpdateOneRequiredWithoutAdminsNestedInput
   sessions?: Prisma.PlatformAdminSessionUpdateManyWithoutAdminNestedInput
+  apiKeys?: Prisma.PlatformApiKeyUpdateManyWithoutAdminNestedInput
   assignedTickets?: Prisma.SupportTicketUpdateManyWithoutAssignedAdminNestedInput
   auditLogs?: Prisma.AuditLogUpdateManyWithoutActorNestedInput
 }
@@ -402,9 +423,11 @@ export type PlatformAdminUncheckedUpdateInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastLoginIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.PlatformAdminSessionUncheckedUpdateManyWithoutAdminNestedInput
+  apiKeys?: Prisma.PlatformApiKeyUncheckedUpdateManyWithoutAdminNestedInput
   assignedTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutAssignedAdminNestedInput
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutActorNestedInput
 }
@@ -421,6 +444,7 @@ export type PlatformAdminCreateManyInput = {
   mfaEnabled?: boolean
   lastLoginAt?: Date | string | null
   lastLoginIp?: string | null
+  phone?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -436,6 +460,7 @@ export type PlatformAdminUpdateManyMutationInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastLoginIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -452,6 +477,7 @@ export type PlatformAdminUncheckedUpdateManyInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastLoginIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -468,6 +494,7 @@ export type PlatformAdminCountOrderByAggregateInput = {
   mfaEnabled?: Prisma.SortOrder
   lastLoginAt?: Prisma.SortOrder
   lastLoginIp?: Prisma.SortOrder
+  phone?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -484,6 +511,7 @@ export type PlatformAdminMaxOrderByAggregateInput = {
   mfaEnabled?: Prisma.SortOrder
   lastLoginAt?: Prisma.SortOrder
   lastLoginIp?: Prisma.SortOrder
+  phone?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -500,6 +528,7 @@ export type PlatformAdminMinOrderByAggregateInput = {
   mfaEnabled?: Prisma.SortOrder
   lastLoginAt?: Prisma.SortOrder
   lastLoginIp?: Prisma.SortOrder
+  phone?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -604,6 +633,20 @@ export type PlatformAdminUpdateOneRequiredWithoutSessionsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.PlatformAdminUpdateToOneWithWhereWithoutSessionsInput, Prisma.PlatformAdminUpdateWithoutSessionsInput>, Prisma.PlatformAdminUncheckedUpdateWithoutSessionsInput>
 }
 
+export type PlatformAdminCreateNestedOneWithoutApiKeysInput = {
+  create?: Prisma.XOR<Prisma.PlatformAdminCreateWithoutApiKeysInput, Prisma.PlatformAdminUncheckedCreateWithoutApiKeysInput>
+  connectOrCreate?: Prisma.PlatformAdminCreateOrConnectWithoutApiKeysInput
+  connect?: Prisma.PlatformAdminWhereUniqueInput
+}
+
+export type PlatformAdminUpdateOneRequiredWithoutApiKeysNestedInput = {
+  create?: Prisma.XOR<Prisma.PlatformAdminCreateWithoutApiKeysInput, Prisma.PlatformAdminUncheckedCreateWithoutApiKeysInput>
+  connectOrCreate?: Prisma.PlatformAdminCreateOrConnectWithoutApiKeysInput
+  upsert?: Prisma.PlatformAdminUpsertWithoutApiKeysInput
+  connect?: Prisma.PlatformAdminWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.PlatformAdminUpdateToOneWithWhereWithoutApiKeysInput, Prisma.PlatformAdminUpdateWithoutApiKeysInput>, Prisma.PlatformAdminUncheckedUpdateWithoutApiKeysInput>
+}
+
 export type PlatformAdminCreateNestedOneWithoutAssignedTicketsInput = {
   create?: Prisma.XOR<Prisma.PlatformAdminCreateWithoutAssignedTicketsInput, Prisma.PlatformAdminUncheckedCreateWithoutAssignedTicketsInput>
   connectOrCreate?: Prisma.PlatformAdminCreateOrConnectWithoutAssignedTicketsInput
@@ -647,9 +690,11 @@ export type PlatformAdminCreateWithoutRoleInput = {
   mfaEnabled?: boolean
   lastLoginAt?: Date | string | null
   lastLoginIp?: string | null
+  phone?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   sessions?: Prisma.PlatformAdminSessionCreateNestedManyWithoutAdminInput
+  apiKeys?: Prisma.PlatformApiKeyCreateNestedManyWithoutAdminInput
   assignedTickets?: Prisma.SupportTicketCreateNestedManyWithoutAssignedAdminInput
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutActorInput
 }
@@ -665,9 +710,11 @@ export type PlatformAdminUncheckedCreateWithoutRoleInput = {
   mfaEnabled?: boolean
   lastLoginAt?: Date | string | null
   lastLoginIp?: string | null
+  phone?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   sessions?: Prisma.PlatformAdminSessionUncheckedCreateNestedManyWithoutAdminInput
+  apiKeys?: Prisma.PlatformApiKeyUncheckedCreateNestedManyWithoutAdminInput
   assignedTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutAssignedAdminInput
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutActorInput
 }
@@ -713,6 +760,7 @@ export type PlatformAdminScalarWhereInput = {
   mfaEnabled?: Prisma.BoolFilter<"PlatformAdmin"> | boolean
   lastLoginAt?: Prisma.DateTimeNullableFilter<"PlatformAdmin"> | Date | string | null
   lastLoginIp?: Prisma.StringNullableFilter<"PlatformAdmin"> | string | null
+  phone?: Prisma.StringNullableFilter<"PlatformAdmin"> | string | null
   createdAt?: Prisma.DateTimeFilter<"PlatformAdmin"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"PlatformAdmin"> | Date | string
 }
@@ -728,9 +776,11 @@ export type PlatformAdminCreateWithoutSessionsInput = {
   mfaEnabled?: boolean
   lastLoginAt?: Date | string | null
   lastLoginIp?: string | null
+  phone?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   role: Prisma.PlatformRoleCreateNestedOneWithoutAdminsInput
+  apiKeys?: Prisma.PlatformApiKeyCreateNestedManyWithoutAdminInput
   assignedTickets?: Prisma.SupportTicketCreateNestedManyWithoutAssignedAdminInput
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutActorInput
 }
@@ -747,8 +797,10 @@ export type PlatformAdminUncheckedCreateWithoutSessionsInput = {
   mfaEnabled?: boolean
   lastLoginAt?: Date | string | null
   lastLoginIp?: string | null
+  phone?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  apiKeys?: Prisma.PlatformApiKeyUncheckedCreateNestedManyWithoutAdminInput
   assignedTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutAssignedAdminInput
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutActorInput
 }
@@ -780,9 +832,11 @@ export type PlatformAdminUpdateWithoutSessionsInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastLoginIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   role?: Prisma.PlatformRoleUpdateOneRequiredWithoutAdminsNestedInput
+  apiKeys?: Prisma.PlatformApiKeyUpdateManyWithoutAdminNestedInput
   assignedTickets?: Prisma.SupportTicketUpdateManyWithoutAssignedAdminNestedInput
   auditLogs?: Prisma.AuditLogUpdateManyWithoutActorNestedInput
 }
@@ -799,8 +853,106 @@ export type PlatformAdminUncheckedUpdateWithoutSessionsInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastLoginIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  apiKeys?: Prisma.PlatformApiKeyUncheckedUpdateManyWithoutAdminNestedInput
+  assignedTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutAssignedAdminNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutActorNestedInput
+}
+
+export type PlatformAdminCreateWithoutApiKeysInput = {
+  id?: string
+  email: string
+  password: string
+  name: string
+  avatarUrl?: string | null
+  status?: $Enums.AdminStatus
+  mfaSecret?: string | null
+  mfaEnabled?: boolean
+  lastLoginAt?: Date | string | null
+  lastLoginIp?: string | null
+  phone?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role: Prisma.PlatformRoleCreateNestedOneWithoutAdminsInput
+  sessions?: Prisma.PlatformAdminSessionCreateNestedManyWithoutAdminInput
+  assignedTickets?: Prisma.SupportTicketCreateNestedManyWithoutAssignedAdminInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutActorInput
+}
+
+export type PlatformAdminUncheckedCreateWithoutApiKeysInput = {
+  id?: string
+  email: string
+  password: string
+  name: string
+  avatarUrl?: string | null
+  roleId: string
+  status?: $Enums.AdminStatus
+  mfaSecret?: string | null
+  mfaEnabled?: boolean
+  lastLoginAt?: Date | string | null
+  lastLoginIp?: string | null
+  phone?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  sessions?: Prisma.PlatformAdminSessionUncheckedCreateNestedManyWithoutAdminInput
+  assignedTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutAssignedAdminInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutActorInput
+}
+
+export type PlatformAdminCreateOrConnectWithoutApiKeysInput = {
+  where: Prisma.PlatformAdminWhereUniqueInput
+  create: Prisma.XOR<Prisma.PlatformAdminCreateWithoutApiKeysInput, Prisma.PlatformAdminUncheckedCreateWithoutApiKeysInput>
+}
+
+export type PlatformAdminUpsertWithoutApiKeysInput = {
+  update: Prisma.XOR<Prisma.PlatformAdminUpdateWithoutApiKeysInput, Prisma.PlatformAdminUncheckedUpdateWithoutApiKeysInput>
+  create: Prisma.XOR<Prisma.PlatformAdminCreateWithoutApiKeysInput, Prisma.PlatformAdminUncheckedCreateWithoutApiKeysInput>
+  where?: Prisma.PlatformAdminWhereInput
+}
+
+export type PlatformAdminUpdateToOneWithWhereWithoutApiKeysInput = {
+  where?: Prisma.PlatformAdminWhereInput
+  data: Prisma.XOR<Prisma.PlatformAdminUpdateWithoutApiKeysInput, Prisma.PlatformAdminUncheckedUpdateWithoutApiKeysInput>
+}
+
+export type PlatformAdminUpdateWithoutApiKeysInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumAdminStatusFieldUpdateOperationsInput | $Enums.AdminStatus
+  mfaSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastLoginIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.PlatformRoleUpdateOneRequiredWithoutAdminsNestedInput
+  sessions?: Prisma.PlatformAdminSessionUpdateManyWithoutAdminNestedInput
+  assignedTickets?: Prisma.SupportTicketUpdateManyWithoutAssignedAdminNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutActorNestedInput
+}
+
+export type PlatformAdminUncheckedUpdateWithoutApiKeysInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  roleId?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumAdminStatusFieldUpdateOperationsInput | $Enums.AdminStatus
+  mfaSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastLoginIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sessions?: Prisma.PlatformAdminSessionUncheckedUpdateManyWithoutAdminNestedInput
   assignedTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutAssignedAdminNestedInput
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutActorNestedInput
 }
@@ -816,10 +968,12 @@ export type PlatformAdminCreateWithoutAssignedTicketsInput = {
   mfaEnabled?: boolean
   lastLoginAt?: Date | string | null
   lastLoginIp?: string | null
+  phone?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   role: Prisma.PlatformRoleCreateNestedOneWithoutAdminsInput
   sessions?: Prisma.PlatformAdminSessionCreateNestedManyWithoutAdminInput
+  apiKeys?: Prisma.PlatformApiKeyCreateNestedManyWithoutAdminInput
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutActorInput
 }
 
@@ -835,9 +989,11 @@ export type PlatformAdminUncheckedCreateWithoutAssignedTicketsInput = {
   mfaEnabled?: boolean
   lastLoginAt?: Date | string | null
   lastLoginIp?: string | null
+  phone?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   sessions?: Prisma.PlatformAdminSessionUncheckedCreateNestedManyWithoutAdminInput
+  apiKeys?: Prisma.PlatformApiKeyUncheckedCreateNestedManyWithoutAdminInput
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutActorInput
 }
 
@@ -868,10 +1024,12 @@ export type PlatformAdminUpdateWithoutAssignedTicketsInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastLoginIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   role?: Prisma.PlatformRoleUpdateOneRequiredWithoutAdminsNestedInput
   sessions?: Prisma.PlatformAdminSessionUpdateManyWithoutAdminNestedInput
+  apiKeys?: Prisma.PlatformApiKeyUpdateManyWithoutAdminNestedInput
   auditLogs?: Prisma.AuditLogUpdateManyWithoutActorNestedInput
 }
 
@@ -887,9 +1045,11 @@ export type PlatformAdminUncheckedUpdateWithoutAssignedTicketsInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastLoginIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.PlatformAdminSessionUncheckedUpdateManyWithoutAdminNestedInput
+  apiKeys?: Prisma.PlatformApiKeyUncheckedUpdateManyWithoutAdminNestedInput
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutActorNestedInput
 }
 
@@ -904,10 +1064,12 @@ export type PlatformAdminCreateWithoutAuditLogsInput = {
   mfaEnabled?: boolean
   lastLoginAt?: Date | string | null
   lastLoginIp?: string | null
+  phone?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   role: Prisma.PlatformRoleCreateNestedOneWithoutAdminsInput
   sessions?: Prisma.PlatformAdminSessionCreateNestedManyWithoutAdminInput
+  apiKeys?: Prisma.PlatformApiKeyCreateNestedManyWithoutAdminInput
   assignedTickets?: Prisma.SupportTicketCreateNestedManyWithoutAssignedAdminInput
 }
 
@@ -923,9 +1085,11 @@ export type PlatformAdminUncheckedCreateWithoutAuditLogsInput = {
   mfaEnabled?: boolean
   lastLoginAt?: Date | string | null
   lastLoginIp?: string | null
+  phone?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   sessions?: Prisma.PlatformAdminSessionUncheckedCreateNestedManyWithoutAdminInput
+  apiKeys?: Prisma.PlatformApiKeyUncheckedCreateNestedManyWithoutAdminInput
   assignedTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutAssignedAdminInput
 }
 
@@ -956,10 +1120,12 @@ export type PlatformAdminUpdateWithoutAuditLogsInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastLoginIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   role?: Prisma.PlatformRoleUpdateOneRequiredWithoutAdminsNestedInput
   sessions?: Prisma.PlatformAdminSessionUpdateManyWithoutAdminNestedInput
+  apiKeys?: Prisma.PlatformApiKeyUpdateManyWithoutAdminNestedInput
   assignedTickets?: Prisma.SupportTicketUpdateManyWithoutAssignedAdminNestedInput
 }
 
@@ -975,9 +1141,11 @@ export type PlatformAdminUncheckedUpdateWithoutAuditLogsInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastLoginIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.PlatformAdminSessionUncheckedUpdateManyWithoutAdminNestedInput
+  apiKeys?: Prisma.PlatformApiKeyUncheckedUpdateManyWithoutAdminNestedInput
   assignedTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutAssignedAdminNestedInput
 }
 
@@ -992,6 +1160,7 @@ export type PlatformAdminCreateManyRoleInput = {
   mfaEnabled?: boolean
   lastLoginAt?: Date | string | null
   lastLoginIp?: string | null
+  phone?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1007,9 +1176,11 @@ export type PlatformAdminUpdateWithoutRoleInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastLoginIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.PlatformAdminSessionUpdateManyWithoutAdminNestedInput
+  apiKeys?: Prisma.PlatformApiKeyUpdateManyWithoutAdminNestedInput
   assignedTickets?: Prisma.SupportTicketUpdateManyWithoutAssignedAdminNestedInput
   auditLogs?: Prisma.AuditLogUpdateManyWithoutActorNestedInput
 }
@@ -1025,9 +1196,11 @@ export type PlatformAdminUncheckedUpdateWithoutRoleInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastLoginIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.PlatformAdminSessionUncheckedUpdateManyWithoutAdminNestedInput
+  apiKeys?: Prisma.PlatformApiKeyUncheckedUpdateManyWithoutAdminNestedInput
   assignedTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutAssignedAdminNestedInput
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutActorNestedInput
 }
@@ -1043,6 +1216,7 @@ export type PlatformAdminUncheckedUpdateManyWithoutRoleInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastLoginIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1054,12 +1228,14 @@ export type PlatformAdminUncheckedUpdateManyWithoutRoleInput = {
 
 export type PlatformAdminCountOutputType = {
   sessions: number
+  apiKeys: number
   assignedTickets: number
   auditLogs: number
 }
 
 export type PlatformAdminCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   sessions?: boolean | PlatformAdminCountOutputTypeCountSessionsArgs
+  apiKeys?: boolean | PlatformAdminCountOutputTypeCountApiKeysArgs
   assignedTickets?: boolean | PlatformAdminCountOutputTypeCountAssignedTicketsArgs
   auditLogs?: boolean | PlatformAdminCountOutputTypeCountAuditLogsArgs
 }
@@ -1079,6 +1255,13 @@ export type PlatformAdminCountOutputTypeDefaultArgs<ExtArgs extends runtime.Type
  */
 export type PlatformAdminCountOutputTypeCountSessionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.PlatformAdminSessionWhereInput
+}
+
+/**
+ * PlatformAdminCountOutputType without action
+ */
+export type PlatformAdminCountOutputTypeCountApiKeysArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.PlatformApiKeyWhereInput
 }
 
 /**
@@ -1108,10 +1291,12 @@ export type PlatformAdminSelect<ExtArgs extends runtime.Types.Extensions.Interna
   mfaEnabled?: boolean
   lastLoginAt?: boolean
   lastLoginIp?: boolean
+  phone?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   role?: boolean | Prisma.PlatformRoleDefaultArgs<ExtArgs>
   sessions?: boolean | Prisma.PlatformAdmin$sessionsArgs<ExtArgs>
+  apiKeys?: boolean | Prisma.PlatformAdmin$apiKeysArgs<ExtArgs>
   assignedTickets?: boolean | Prisma.PlatformAdmin$assignedTicketsArgs<ExtArgs>
   auditLogs?: boolean | Prisma.PlatformAdmin$auditLogsArgs<ExtArgs>
   _count?: boolean | Prisma.PlatformAdminCountOutputTypeDefaultArgs<ExtArgs>
@@ -1129,6 +1314,7 @@ export type PlatformAdminSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   mfaEnabled?: boolean
   lastLoginAt?: boolean
   lastLoginIp?: boolean
+  phone?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   role?: boolean | Prisma.PlatformRoleDefaultArgs<ExtArgs>
@@ -1146,6 +1332,7 @@ export type PlatformAdminSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   mfaEnabled?: boolean
   lastLoginAt?: boolean
   lastLoginIp?: boolean
+  phone?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   role?: boolean | Prisma.PlatformRoleDefaultArgs<ExtArgs>
@@ -1163,14 +1350,16 @@ export type PlatformAdminSelectScalar = {
   mfaEnabled?: boolean
   lastLoginAt?: boolean
   lastLoginIp?: boolean
+  phone?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type PlatformAdminOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "password" | "name" | "avatarUrl" | "roleId" | "status" | "mfaSecret" | "mfaEnabled" | "lastLoginAt" | "lastLoginIp" | "createdAt" | "updatedAt", ExtArgs["result"]["platformAdmin"]>
+export type PlatformAdminOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "password" | "name" | "avatarUrl" | "roleId" | "status" | "mfaSecret" | "mfaEnabled" | "lastLoginAt" | "lastLoginIp" | "phone" | "createdAt" | "updatedAt", ExtArgs["result"]["platformAdmin"]>
 export type PlatformAdminInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   role?: boolean | Prisma.PlatformRoleDefaultArgs<ExtArgs>
   sessions?: boolean | Prisma.PlatformAdmin$sessionsArgs<ExtArgs>
+  apiKeys?: boolean | Prisma.PlatformAdmin$apiKeysArgs<ExtArgs>
   assignedTickets?: boolean | Prisma.PlatformAdmin$assignedTicketsArgs<ExtArgs>
   auditLogs?: boolean | Prisma.PlatformAdmin$auditLogsArgs<ExtArgs>
   _count?: boolean | Prisma.PlatformAdminCountOutputTypeDefaultArgs<ExtArgs>
@@ -1187,6 +1376,7 @@ export type $PlatformAdminPayload<ExtArgs extends runtime.Types.Extensions.Inter
   objects: {
     role: Prisma.$PlatformRolePayload<ExtArgs>
     sessions: Prisma.$PlatformAdminSessionPayload<ExtArgs>[]
+    apiKeys: Prisma.$PlatformApiKeyPayload<ExtArgs>[]
     assignedTickets: Prisma.$SupportTicketPayload<ExtArgs>[]
     auditLogs: Prisma.$AuditLogPayload<ExtArgs>[]
   }
@@ -1202,6 +1392,7 @@ export type $PlatformAdminPayload<ExtArgs extends runtime.Types.Extensions.Inter
     mfaEnabled: boolean
     lastLoginAt: Date | null
     lastLoginIp: string | null
+    phone: string | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["platformAdmin"]>
@@ -1600,6 +1791,7 @@ export interface Prisma__PlatformAdminClient<T, Null = never, ExtArgs extends ru
   readonly [Symbol.toStringTag]: "PrismaPromise"
   role<T extends Prisma.PlatformRoleDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.PlatformRoleDefaultArgs<ExtArgs>>): Prisma.Prisma__PlatformRoleClient<runtime.Types.Result.GetResult<Prisma.$PlatformRolePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   sessions<T extends Prisma.PlatformAdmin$sessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.PlatformAdmin$sessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PlatformAdminSessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  apiKeys<T extends Prisma.PlatformAdmin$apiKeysArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.PlatformAdmin$apiKeysArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PlatformApiKeyPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   assignedTickets<T extends Prisma.PlatformAdmin$assignedTicketsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.PlatformAdmin$assignedTicketsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SupportTicketPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   auditLogs<T extends Prisma.PlatformAdmin$auditLogsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.PlatformAdmin$auditLogsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AuditLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
@@ -1642,6 +1834,7 @@ export interface PlatformAdminFieldRefs {
   readonly mfaEnabled: Prisma.FieldRef<"PlatformAdmin", 'Boolean'>
   readonly lastLoginAt: Prisma.FieldRef<"PlatformAdmin", 'DateTime'>
   readonly lastLoginIp: Prisma.FieldRef<"PlatformAdmin", 'String'>
+  readonly phone: Prisma.FieldRef<"PlatformAdmin", 'String'>
   readonly createdAt: Prisma.FieldRef<"PlatformAdmin", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"PlatformAdmin", 'DateTime'>
 }
@@ -2066,6 +2259,30 @@ export type PlatformAdmin$sessionsArgs<ExtArgs extends runtime.Types.Extensions.
   take?: number
   skip?: number
   distinct?: Prisma.PlatformAdminSessionScalarFieldEnum | Prisma.PlatformAdminSessionScalarFieldEnum[]
+}
+
+/**
+ * PlatformAdmin.apiKeys
+ */
+export type PlatformAdmin$apiKeysArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the PlatformApiKey
+   */
+  select?: Prisma.PlatformApiKeySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the PlatformApiKey
+   */
+  omit?: Prisma.PlatformApiKeyOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PlatformApiKeyInclude<ExtArgs> | null
+  where?: Prisma.PlatformApiKeyWhereInput
+  orderBy?: Prisma.PlatformApiKeyOrderByWithRelationInput | Prisma.PlatformApiKeyOrderByWithRelationInput[]
+  cursor?: Prisma.PlatformApiKeyWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.PlatformApiKeyScalarFieldEnum | Prisma.PlatformApiKeyScalarFieldEnum[]
 }
 
 /**

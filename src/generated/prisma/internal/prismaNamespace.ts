@@ -402,6 +402,7 @@ export const ModelName = {
   PlatformPermission: 'PlatformPermission',
   PlatformRolePermission: 'PlatformRolePermission',
   PlatformAdminSession: 'PlatformAdminSession',
+  PlatformApiKey: 'PlatformApiKey',
   Company: 'Company',
   Plan: 'Plan',
   PlanVersion: 'PlanVersion',
@@ -428,7 +429,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "platformAdmin" | "platformRole" | "platformPermission" | "platformRolePermission" | "platformAdminSession" | "company" | "plan" | "planVersion" | "subscription" | "payment" | "promotion" | "supportTicket" | "ticketMessage" | "announcement" | "auditLog" | "systemSetting"
+    modelProps: "platformAdmin" | "platformRole" | "platformPermission" | "platformRolePermission" | "platformAdminSession" | "platformApiKey" | "company" | "plan" | "planVersion" | "subscription" | "payment" | "promotion" | "supportTicket" | "ticketMessage" | "announcement" | "auditLog" | "systemSetting"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -799,6 +800,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.PlatformAdminSessionCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.PlatformAdminSessionCountAggregateOutputType> | number
+        }
+      }
+    }
+    PlatformApiKey: {
+      payload: Prisma.$PlatformApiKeyPayload<ExtArgs>
+      fields: Prisma.PlatformApiKeyFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PlatformApiKeyFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformApiKeyPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PlatformApiKeyFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformApiKeyPayload>
+        }
+        findFirst: {
+          args: Prisma.PlatformApiKeyFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformApiKeyPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PlatformApiKeyFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformApiKeyPayload>
+        }
+        findMany: {
+          args: Prisma.PlatformApiKeyFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformApiKeyPayload>[]
+        }
+        create: {
+          args: Prisma.PlatformApiKeyCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformApiKeyPayload>
+        }
+        createMany: {
+          args: Prisma.PlatformApiKeyCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PlatformApiKeyCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformApiKeyPayload>[]
+        }
+        delete: {
+          args: Prisma.PlatformApiKeyDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformApiKeyPayload>
+        }
+        update: {
+          args: Prisma.PlatformApiKeyUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformApiKeyPayload>
+        }
+        deleteMany: {
+          args: Prisma.PlatformApiKeyDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PlatformApiKeyUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PlatformApiKeyUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformApiKeyPayload>[]
+        }
+        upsert: {
+          args: Prisma.PlatformApiKeyUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformApiKeyPayload>
+        }
+        aggregate: {
+          args: Prisma.PlatformApiKeyAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePlatformApiKey>
+        }
+        groupBy: {
+          args: Prisma.PlatformApiKeyGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PlatformApiKeyGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PlatformApiKeyCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PlatformApiKeyCountAggregateOutputType> | number
         }
       }
     }
@@ -1667,6 +1742,7 @@ export const PlatformAdminScalarFieldEnum = {
   mfaEnabled: 'mfaEnabled',
   lastLoginAt: 'lastLoginAt',
   lastLoginIp: 'lastLoginIp',
+  phone: 'phone',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -1717,6 +1793,22 @@ export const PlatformAdminSessionScalarFieldEnum = {
 } as const
 
 export type PlatformAdminSessionScalarFieldEnum = (typeof PlatformAdminSessionScalarFieldEnum)[keyof typeof PlatformAdminSessionScalarFieldEnum]
+
+
+export const PlatformApiKeyScalarFieldEnum = {
+  id: 'id',
+  adminId: 'adminId',
+  name: 'name',
+  keyPrefix: 'keyPrefix',
+  keyHash: 'keyHash',
+  scopes: 'scopes',
+  lastUsedAt: 'lastUsedAt',
+  expiresAt: 'expiresAt',
+  revokedAt: 'revokedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type PlatformApiKeyScalarFieldEnum = (typeof PlatformApiKeyScalarFieldEnum)[keyof typeof PlatformApiKeyScalarFieldEnum]
 
 
 export const CompanyScalarFieldEnum = {
@@ -2346,6 +2438,7 @@ export type GlobalOmitConfig = {
   platformPermission?: Prisma.PlatformPermissionOmit
   platformRolePermission?: Prisma.PlatformRolePermissionOmit
   platformAdminSession?: Prisma.PlatformAdminSessionOmit
+  platformApiKey?: Prisma.PlatformApiKeyOmit
   company?: Prisma.CompanyOmit
   plan?: Prisma.PlanOmit
   planVersion?: Prisma.PlanVersionOmit

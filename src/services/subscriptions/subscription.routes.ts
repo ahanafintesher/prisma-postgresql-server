@@ -14,6 +14,7 @@ router.patch("/plans/:id", requirePermission("platform.plans.manage"), Subscript
 router.put("/plans/:id", requirePermission("platform.plans.manage"), SubscriptionController.updatePlan);
 
 router.get("/", cacheResponse({ ttlSeconds: 30, prefix: "subscriptions" }), SubscriptionController.getSubscriptions);
+router.get("/:id", cacheResponse({ ttlSeconds: 30, prefix: "subscriptions" }), SubscriptionController.getSubscriptionById);
 router.post("/:id/change-plan", requirePermission("platform.subscriptions.manage"), SubscriptionController.changePlan);
 router.post("/:id/extend-trial", requirePermission("platform.subscriptions.manage"), SubscriptionController.extendTrial);
 router.post("/:id/cancel", requirePermission("platform.subscriptions.manage"), SubscriptionController.cancelSubscription);

@@ -27,9 +27,13 @@
     "express": "^5.2.1",
     "ioredis": "^6.0.0",
     "jsonwebtoken": "^9.0.3",
-    "prisma": "^7.9.1"
+    "otplib": "^13.5.0",
+    "prisma": "^7.9.1",
+    "qrcode": "^1.5.4",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@types/qrcode": "^1.5.6",
     "ts-node-dev": "^2.0.0",
     "tsx": "^4.23.12",
     "typescript": "^7.0.2"

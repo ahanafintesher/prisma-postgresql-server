@@ -11,6 +11,7 @@ declare global {
         email: string;
         role: string;
         roleSlug?: string;
+        sessionId?: string;
         permissions?: string[];
       };
     }
@@ -22,6 +23,7 @@ interface JwtPayload {
   email: string;
   role: string;
   roleSlug?: string;
+  sessionId?: string;
 }
 
 export const authenticate = async (
@@ -44,6 +46,16 @@ export const authenticate = async (
     const secret = process.env.JWT_SECRET || "default_fallback_secret_worksphere_2026";
     const decoded = jwt.verify(token, secret) as JwtPayload;
 
+    // If token has an associated session, verify session is not revoked or expired
+    if (decoded.sessionId) {
+      const session = await prisma.platformAdminSession.findUnique({
+        where: { id: decoded.sessionId },
+      });
+      if (!session || session.revokedAt || session.expiresAt < new Date()) {
+        return sendError(res, "Session has expired or been revoked", 401);
+      }
+    }
+
     // Verify admin is active in database
     const admin = await prisma.platformAdmin.findUnique({
       where: { id: decoded.id },
@@ -65,6 +77,7 @@ export const authenticate = async (
       email: admin.email,
       role: admin.role.name,
       roleSlug: admin.role.slug,
+      sessionId: decoded.sessionId,
       permissions: admin.role.permissions.map((p) => p.permissionKey),
     };
 

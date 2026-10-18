@@ -56,6 +56,7 @@ export const ModelName = {
   PlatformPermission: 'PlatformPermission',
   PlatformRolePermission: 'PlatformRolePermission',
   PlatformAdminSession: 'PlatformAdminSession',
+  PlatformApiKey: 'PlatformApiKey',
   Company: 'Company',
   Plan: 'Plan',
   PlanVersion: 'PlanVersion',
@@ -97,6 +98,7 @@ export const PlatformAdminScalarFieldEnum = {
   mfaEnabled: 'mfaEnabled',
   lastLoginAt: 'lastLoginAt',
   lastLoginIp: 'lastLoginIp',
+  phone: 'phone',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -147,6 +149,22 @@ export const PlatformAdminSessionScalarFieldEnum = {
 } as const
 
 export type PlatformAdminSessionScalarFieldEnum = (typeof PlatformAdminSessionScalarFieldEnum)[keyof typeof PlatformAdminSessionScalarFieldEnum]
+
+
+export const PlatformApiKeyScalarFieldEnum = {
+  id: 'id',
+  adminId: 'adminId',
+  name: 'name',
+  keyPrefix: 'keyPrefix',
+  keyHash: 'keyHash',
+  scopes: 'scopes',
+  lastUsedAt: 'lastUsedAt',
+  expiresAt: 'expiresAt',
+  revokedAt: 'revokedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type PlatformApiKeyScalarFieldEnum = (typeof PlatformApiKeyScalarFieldEnum)[keyof typeof PlatformApiKeyScalarFieldEnum]
 
 
 export const CompanyScalarFieldEnum = {

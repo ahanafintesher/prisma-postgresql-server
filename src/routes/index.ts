@@ -10,6 +10,7 @@ import auditRoutes from "../services/audit/audit.routes";
 import adminUsersRoutes from "../services/admin-users/admin-users.routes";
 import rolesRoutes from "../services/roles/roles.routes";
 import settingsRoutes from "../services/settings/settings.routes";
+import profileRoutes from "../services/profile/profile.routes";
 
 import { SubscriptionController } from "../services/subscriptions/subscription.controller";
 import { PaymentController } from "../services/payments/payment.controller";
@@ -81,12 +82,14 @@ router.use("/roles", rolesRoutes);
 router.use("/logs", auditRoutes);
 router.use("/audit-logs", auditRoutes);
 router.use("/settings", settingsRoutes);
+router.use("/profile", profileRoutes);
 router.use("/", telemetryRouter);
 
 // -----------------------------------------------------------------------
 // 2. Standard /api prefix compatibility
 // -----------------------------------------------------------------------
 router.use("/api/auth", authRoutes);
+router.use("/api/profile", profileRoutes);
 router.use("/api/dashboard", dashboardRoutes);
 router.use("/api/companies", companyRoutes);
 router.use("/api/subscriptions", subscriptionRoutes);
@@ -109,6 +112,7 @@ router.use("/api", telemetryRouter);
 // -----------------------------------------------------------------------
 const v1Admin = Router();
 v1Admin.use("/auth", authRoutes);
+v1Admin.use("/profile", profileRoutes);
 v1Admin.use("/dashboard", dashboardRoutes);
 v1Admin.use("/companies", companyRoutes);
 v1Admin.use("/plans", plansRouter);

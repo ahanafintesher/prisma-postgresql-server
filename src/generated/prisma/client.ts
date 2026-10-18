@@ -65,6 +65,11 @@ export type PlatformRolePermission = Prisma.PlatformRolePermissionModel
  */
 export type PlatformAdminSession = Prisma.PlatformAdminSessionModel
 /**
+ * Model PlatformApiKey
+ * 
+ */
+export type PlatformApiKey = Prisma.PlatformApiKeyModel
+/**
  * Model Company
  * 
  */

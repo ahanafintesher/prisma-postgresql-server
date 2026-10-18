@@ -4,6 +4,7 @@ import router from "./routes";
 import { getRootInfo } from "./routes/root";
 import { getRedisHealth } from "./lib/redis";
 import { SettingsController } from "./services/settings/settings.controller";
+import { sendError } from "./lib/response";
 
 const app = express();
 
@@ -45,10 +46,8 @@ app.use(express.json());
 // Handle malformed JSON body errors from express.json() gracefully
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   if (err instanceof SyntaxError && "body" in err) {
-    return res.status(400).json({
-      success: false,
-      error: "Malformed JSON payload in request body",
-      message: err.message,
+    return sendError(res, "Malformed JSON payload in request body", 400, {
+      body: ["Syntax error parsing JSON payload"],
     });
   }
   return next(err);
@@ -76,20 +75,16 @@ app.use("/", router);
 
 // 404 Catch-all for undefined routes
 app.use((req: express.Request, res: express.Response) => {
-  res.status(404).json({
-    success: false,
-    error: `Route not found: ${req.method} ${req.originalUrl}`,
-  });
+  return sendError(res, `Route not found: ${req.method} ${req.originalUrl}`, 404);
 });
 
 // Global error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error("[Internal Server Error]", err);
-  const status = err.status || err.statusCode || 500;
-  res.status(status).json({
-    success: false,
-    error: err.message || "Internal server error",
-  });
+  const status = typeof err.status === "number" ? err.status : typeof err.statusCode === "number" ? err.statusCode : 500;
+  const message = err.message || "Internal server error";
+  const errors = err.errors || undefined;
+  return sendError(res, message, status, errors);
 });
 
 export default app;

@@ -111,6 +111,83 @@ export class SupportController {
     }
   }
 
+  static async createTicket(req: Request, res: Response) {
+    try {
+      const { companyId, subject, description, message, priority, requesterEmail, assignedAdminId } = req.body;
+
+      if (!companyId || !subject) {
+        return sendError(res, "companyId and subject are required", 400, {
+          ...(!companyId ? { companyId: ["Company ID is required"] } : {}),
+          ...(!subject ? { subject: ["Subject is required"] } : {}),
+        });
+      }
+
+      const company = await prisma.company.findUnique({
+        where: { id: companyId },
+      });
+
+      if (!company) {
+        return sendError(res, "Company not found", 404);
+      }
+
+      const validPriorities = ["LOW", "MEDIUM", "HIGH", "URGENT"];
+      const ticketPriority = priority && validPriorities.includes(String(priority).toUpperCase())
+        ? (String(priority).toUpperCase() as any)
+        : "MEDIUM";
+
+      const ticket = await prisma.supportTicket.create({
+        data: {
+          companyId,
+          subject: String(subject).trim(),
+          priority: ticketPriority,
+          status: "OPEN",
+          requesterEmail: requesterEmail ? String(requesterEmail).trim() : company.ownerEmail,
+          assignedAdminId: assignedAdminId || null,
+          ...(description || message
+            ? {
+                messages: {
+                  create: {
+                    authorId: req.user?.id || "system",
+                    authorRole: req.user?.roleSlug || "SUPER_ADMIN",
+                    isInternalNote: false,
+                    messageBody: String(description || message).trim(),
+                  },
+                },
+              }
+            : {}),
+        },
+        include: {
+          company: {
+            select: { id: true, name: true, slug: true, ownerEmail: true },
+          },
+          assignedAdmin: {
+            select: { id: true, name: true, email: true },
+          },
+          messages: true,
+        },
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          actorId: req.user?.id || null,
+          actorEmail: req.user?.email || "system",
+          actorRole: req.user?.roleSlug || "system",
+          action: "SUPPORT_TICKET_CREATED",
+          resourceType: "SUPPORT_TICKET",
+          resourceId: ticket.id,
+          reason: `Created ticket: ${ticket.subject}`,
+        },
+      });
+
+      await invalidateCacheCategory("tickets");
+      await invalidateCacheCategory("dashboard");
+
+      return sendSuccess(res, ticket, undefined, "Support ticket created successfully", 201);
+    } catch (error: any) {
+      return sendError(res, "Failed to create support ticket", 500);
+    }
+  }
+
   static async addMessage(req: Request, res: Response) {
     try {
       const id = req.params.id as string;
